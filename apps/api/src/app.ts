@@ -7,6 +7,7 @@ import { passport } from './lib/passport.js';
 import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 import { usersRouter } from './routes/users.js';
+import { workspacesRouter } from './routes/workspaces.js';
 
 export function createApp() {
   const app = express();
@@ -21,6 +22,7 @@ export function createApp() {
   app.use('/health', healthRouter);
   app.use('/auth', authRouter);
   app.use('/users', usersRouter);
+  app.use('/workspaces', workspacesRouter);
 
   app.use(errorHandler);
 
