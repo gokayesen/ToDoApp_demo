@@ -1,0 +1,182 @@
+# Sprint Status Tracker — ToDoApp_demo
+# Generated: 2026-07-18
+# Source: Epics-and-Stories.md v0.3 (post Implementation-Readiness-Report.md Pass 3 — clear for Sprint Planning)
+#
+# NOTE ON PROVENANCE: this file was generated manually. The official BMAD
+# `bmad-sprint-planning` workflow (SKILL.md + sprint-status-template.yaml)
+# is referenced in _bmad/_config/files-manifest.csv but is not actually
+# installed under _bmad/bmm/4-implementation/ in this project — only
+# config/manifest scaffolding exists. This file follows the general BMAD
+# sprint-status convention (epic -> sprint -> story -> status) but is not
+# guaranteed to match the official schema byte-for-byte. Recommend
+# completing the BMAD module install and re-running the real
+# `bmad-sprint-planning` / `bmad-sprint-status` workflows once available,
+# which may reformat or renumber this tracker.
+#
+# STORY COUNT CORRECTION: Epics-and-Stories.md's header states
+# "Total: 8 epics, 46 stories" — this is stale. Recounting the actual
+# epic tables gives 63 stories (64 including the 3.10 stretch/optional
+# item). This tracker uses the corrected count. Recommend fixing the
+# header in Epics-and-Stories.md separately (cosmetic, non-blocking).
+#
+# Sprint sizing assumes a solo developer (PRD §9 assumption #1, still
+# unconfirmed) and no fixed deadline (PRD §9 assumption #4, still
+# unconfirmed). Sprints are logical batches, not calendar-dated — assign
+# real dates once those two assumptions are confirmed.
+#
+# Sequencing follows Epics-and-Stories.md's own "Cross-Epic Sequencing
+# Note": Epic 5's gateway (5.1-5.3) is pulled forward to right after
+# Epic 3 instead of waiting for Epic 4; CI (8.1) and Observability (8.6)
+# are pulled forward into Sprint 1 alongside scaffolding.
+
+statuses: [backlog, ready, in-progress, review, done, blocked]
+
+sprints:
+  - sprint: 1
+    epic: "Epic 1 — Foundation & Auth (part 1) + pulled-forward infra"
+    theme: "Scaffold, WebSocket proxy spike, CI, observability — nothing product-specific yet"
+    stories:
+      - { id: "1.1", title: "Monorepo scaffold (pnpm workspaces + Turborepo, apps/web, apps/api, packages/shared, ESLint/Prettier/TS, GH Actions skeleton)", size: M, status: done, maps_to: "Architecture §2", notes: "Delivered 2026-07-18. Next.js pinned to 15.5.20 (not latest 16) to match Architecture.md §2. pnpm usable only via `npx pnpm@9` in this environment — corepack's signature verification fails against current npm registry keys and global npm install lacks write permission to /usr/local/lib/node_modules; CI workflow uses pnpm/action-setup instead so it is unaffected. Verified: install, lint, typecheck all pass across all 3 packages; both apps/api (health endpoint) and apps/web boot and respond." }
+      - { id: "1.2", title: "Postgres schema & Prisma setup: User, OAuthAccount, RefreshToken, PasswordResetToken, Workspace, WorkspaceMember, Board, BoardMember + cascade rules + first migration + docker-compose", size: M, status: ready, maps_to: "Architecture §4" }
+      - { id: "1.3", title: "Railway WebSocket proxy spike: minimal Socket.io echo server on Railway, confirm WS upgrade works", size: S, status: ready, maps_to: "Architecture §10 risk" }
+      - { id: "8.1", title: "CI pipeline: lint, typecheck, unit+integration tests gating PRs (pulled forward from Epic 8 per sequencing note)", size: S, status: ready, maps_to: "NFR9" }
+      - { id: "8.6", title: "Observability: Sentry wired in both apps, pino structured logging in API (pulled forward from Epic 8 per sequencing note)", size: S, status: ready, maps_to: "NFR10" }
+
+  - sprint: 2
+    epic: "Epic 1 — Foundation & Auth (part 2)"
+    theme: "Auth complete: email/password, Google OAuth, session persistence, password reset, profile, auth UI"
+    depends_on_sprints: [1]
+    stories:
+      - { id: "1.4", title: "Email/password registration & login: argon2 hashing, /auth/register, /auth/login, /auth/refresh with rotation+reuse detection, Redis-backed rate limiting, cross-origin cookie", size: M, status: backlog, maps_to: "FR1, FR3, NFR3" }
+      - { id: "1.5", title: "Google OAuth login: Passport Google strategy, account-linking gated on email_verified", size: M, status: backlog, maps_to: "FR2" }
+      - { id: "1.6", title: "Session persistence & refresh: silent token refresh, logout (revokes token family), authenticate middleware", size: S, status: backlog, maps_to: "FR5" }
+      - { id: "1.7", title: "Forgot/reset password: signed time-boxed token, Resend email delivery, reset form", size: M, status: backlog, maps_to: "FR3" }
+      - { id: "1.8", title: "User profile: display name + avatar (upload or generated initials), GET/PATCH /users/me", size: S, status: backlog, maps_to: "FR4" }
+      - { id: "1.9", title: "Auth screens UI (sign in/up/forgot password) per UX §4.5, shadcn/ui form components", size: M, status: backlog, maps_to: "UX §4.5" }
+
+  - sprint: 3
+    epic: "Epic 2 — Workspaces & Boards (part 1)"
+    theme: "RBAC choke point + workspace/board creation + membership invites"
+    depends_on_sprints: [2]
+    stories:
+      - { id: "2.1", title: "requireRole middleware + resource-context loader implementing full effective-role resolution (Owner -> implicit Admin, else explicit BoardMember, else 403)", size: M, status: backlog, maps_to: "NFR3, Architecture §7.4" }
+      - { id: "2.2", title: "Create/list Workspaces, become Owner on creation", size: S, status: backlog, maps_to: "FR6" }
+      - { id: "2.3", title: "Invite members to Workspace by email (pending invite; triggers registration if user doesn't exist)", size: M, status: backlog, maps_to: "FR7" }
+      - { id: "2.4", title: "Create Board within a Workspace", size: S, status: backlog, maps_to: "FR8" }
+      - { id: "2.5", title: "Invite/assign Board members with role (Admin/Member/Viewer)", size: M, status: backlog, maps_to: "FR9" }
+      - { id: "2.6", title: "Change member role / remove member from Board incl. socket-eviction flow; rejects removing/downgrading a Workspace Owner's implicit access with 400", size: M, status: backlog, maps_to: "FR10" }
+
+  - sprint: 4
+    epic: "Epic 2 — Workspaces & Boards (part 2)"
+    theme: "Board lifecycle + dashboard/app-shell UI"
+    depends_on_sprints: [3]
+    stories:
+      - { id: "2.7", title: "Archive & restore Board", size: S, status: backlog, maps_to: "FR11" }
+      - { id: "2.8", title: "Permanently delete Board with confirmation step", size: S, status: backlog, maps_to: "FR12" }
+      - { id: "2.9", title: "Board background customization (color or image)", size: S, status: backlog, maps_to: "FR13" }
+      - { id: "2.10", title: "Dashboard UI: grid of boards grouped by workspace, recently-viewed row, empty-state CTA", size: M, status: backlog, maps_to: "FR39, UX §4.1" }
+      - { id: "2.11", title: "App shell: top bar (workspace switcher, search stub, notification bell stub, user menu) + collapsible sidebar", size: M, status: backlog, maps_to: "UX §3" }
+
+  - sprint: 5
+    epic: "Epic 3 — Lists & Cards Core (part 1)"
+    theme: "List/Card CRUD, position engine, board layout, quick-add, list reordering"
+    depends_on_sprints: [4]
+    stories:
+      - { id: "3.1", title: "List CRUD: create, rename, delete; Card CRUD: create with title, delete", size: M, status: backlog, maps_to: "FR14, FR17" }
+      - { id: "3.2", title: "Fractional-index position engine (shared service used by both List and Card ordering)", size: M, status: backlog, maps_to: "Architecture §4, NFR8" }
+      - { id: "3.3", title: "Board View UI: horizontal list layout, inline + Add list", size: M, status: backlog, maps_to: "UX §4.2" }
+      - { id: "3.4", title: "Inline quick-add card (textarea-in-place, Enter-to-add-next pattern)", size: S, status: backlog, maps_to: "UX §5" }
+      - { id: "3.5", title: "Drag-and-drop List reordering (pointer + keyboard alternative)", size: M, status: backlog, maps_to: "FR15, NFR6" }
+
+  - sprint: 6
+    epic: "Epic 3 — Lists & Cards Core (part 2)"
+    theme: "Card drag-and-drop, archive/delete, card face preview"
+    depends_on_sprints: [5]
+    stories:
+      - { id: "3.6", title: "Drag-and-drop Card reordering within/across Lists (pointer + keyboard), optimistic update+rollback, server-computed position, mobile Move-to-list fallback", size: L, status: backlog, maps_to: "FR19, UX §5/§7, NFR6" }
+      - { id: "3.7", title: "Archive/restore List (cascades to its Cards)", size: S, status: backlog, maps_to: "FR16" }
+      - { id: "3.8", title: "Archive/restore Card; permanent delete Card", size: S, status: backlog, maps_to: "FR21, FR22" }
+      - { id: "3.9", title: "Card face preview: labels, due-date pill, assignee avatars, checklist progress, comment/attachment counts (stubs until Epic 4)", size: S, status: backlog, maps_to: "FR23" }
+      - { id: "3.10", title: "(stretch) Cross-board card move", size: M, status: backlog, maps_to: "FR20 — out-of-scope candidate, PRD §8", notes: "Stretch/optional per PRD §8 descope list — schedule last or drop if timeline is tight" }
+
+  - sprint: 7
+    epic: "Epic 5 — Real-Time Collaboration (part 1, pulled forward)"
+    theme: "Socket gateway, presence, broadcast pipeline — de-risk WS infra early per Architecture §10"
+    depends_on_sprints: [6]
+    notes: "Pulled forward per Epics-and-Stories.md Cross-Epic Sequencing Note: starts right after Epic 3, not after Epic 4."
+    stories:
+      - { id: "5.1", title: "Socket.io gateway: handshake auth via access token, connection middleware, board:join/leave with role re-validation, Redis adapter, client reconnect-on-refresh", size: L, status: backlog, maps_to: "Architecture §6" }
+      - { id: "5.2", title: "Presence: Redis presence set per board room, presence:update broadcast, live avatar stack", size: M, status: backlog, maps_to: "FR32, UX §6" }
+      - { id: "5.3", title: "Broadcast pipeline: every List/Card mutation emits its event to the board room after DB commit", size: L, status: backlog, maps_to: "FR31, Architecture §6 event catalog" }
+
+  - sprint: 8
+    epic: "Epic 4 — Card Detail & Rich Content (part 1)"
+    theme: "Card Detail shell, title/description, labels, dates, assignees"
+    depends_on_sprints: [6]
+    stories:
+      - { id: "4.1", title: "Card Detail modal/drawer shell (responsive: modal desktop, sheet mobile)", size: M, status: backlog, maps_to: "UX §4.3" }
+      - { id: "4.2", title: "Inline-editable title & markdown description", size: S, status: backlog, maps_to: "FR18" }
+      - { id: "4.3", title: "Labels: per-board CRUD (name+color) + attach/remove on card, accessible color palette", size: M, status: backlog, maps_to: "FR24" }
+      - { id: "4.4", title: "Due/start dates + overdue visual flag (color+icon, not color-only)", size: S, status: backlog, maps_to: "FR25" }
+      - { id: "4.5", title: "Assignees: add/remove Board Members on a card", size: S, status: backlog, maps_to: "FR26" }
+
+  - sprint: 9
+    epic: "Epic 4 — Card Detail & Rich Content (part 2)"
+    theme: "Checklists, comments, attachments, activity log"
+    depends_on_sprints: [8]
+    stories:
+      - { id: "4.6", title: "Checklists: create, add/check/reorder items, progress bar", size: M, status: backlog, maps_to: "FR27" }
+      - { id: "4.7", title: "Comments with @mention autocomplete (scoped to Board Members)", size: M, status: backlog, maps_to: "FR28" }
+      - { id: "4.8", title: "Attachments: presigned R2 upload, image thumbnail vs. file-link rendering, size-limit enforcement", size: M, status: backlog, maps_to: "FR29", notes: "Size limit value pending PRD §9 assumption #3 confirmation (assumed 10MB/file)" }
+      - { id: "4.9", title: "Card Activity Log: system-generated entries interleaved with comments", size: M, status: backlog, maps_to: "FR30" }
+
+  - sprint: 10
+    epic: "Epic 5 — Real-Time Collaboration (part 2)"
+    theme: "Client-side live updates + UX polish, now that Epic 4 event types exist"
+    depends_on_sprints: [7, 9]
+    stories:
+      - { id: "5.4", title: "Client-side live-update handling: merge socket events into TanStack Query cache, animate card move + highlight fade", size: M, status: backlog, maps_to: "FR31, UX §6" }
+      - { id: "5.5", title: "Also viewing this card indicator + live field updates inside an open Card Detail", size: M, status: backlog, maps_to: "UX §6" }
+      - { id: "5.6", title: "Concurrent-edit conflict signal (version/updatedAt comparison, inline just-updated-by-X notice)", size: M, status: backlog, maps_to: "FR33, UX §6" }
+      - { id: "5.7", title: "Background-change toast for board sections currently out of view", size: S, status: backlog, maps_to: "UX §6" }
+
+  - sprint: 11
+    epic: "Epic 6 — Notifications"
+    theme: "In-app notification center + transactional email + preferences"
+    depends_on_sprints: [9]
+    stories:
+      - { id: "6.1", title: "Notification and NotificationPreference data models + GET/PATCH endpoints", size: M, status: backlog, maps_to: "FR34, FR35, FR36" }
+      - { id: "6.2", title: "Notification Center UI: slide-over panel, grouped by day, unread state, click-through navigation", size: M, status: backlog, maps_to: "FR36, UX §4.4" }
+      - { id: "6.3", title: "Notification triggers: assignment, @mention, added to board/workspace", size: M, status: backlog, maps_to: "FR34" }
+      - { id: "6.4", title: "Due-date reminder job: approaching/overdue sweep, single-instance cron or Redis leader-lock", size: M, status: backlog, maps_to: "FR34, NFR5" }
+      - { id: "6.5", title: "Transactional email via Resend + React Email templates per notification type", size: M, status: backlog, maps_to: "FR35" }
+      - { id: "6.6", title: "Per-event email preference settings screen", size: S, status: backlog, maps_to: "FR35" }
+
+  - sprint: 12
+    epic: "Epic 7 — Search & Filtering"
+    theme: "Cross-board search + board-level filters"
+    depends_on_sprints: [9]
+    stories:
+      - { id: "7.1", title: "Cross-board keyword search (GET /search?q=), scoped to accessible boards", size: M, status: backlog, maps_to: "FR37" }
+      - { id: "7.2", title: "Global search UI (top bar entry point, results grouped by board)", size: S, status: backlog, maps_to: "FR37" }
+      - { id: "7.3", title: "Board-level filter popover: label/assignee/due-date range, dim/hide in place, active-filter badge", size: M, status: backlog, maps_to: "FR38, UX §4.2" }
+
+  - sprint: 13
+    epic: "Epic 8 — Polish, Accessibility & Deployment (remaining)"
+    theme: "Test coverage, E2E, accessibility, performance, deployment, account deletion, README"
+    depends_on_sprints: [10, 11, 12]
+    notes: "8.1 and 8.6 already delivered in Sprint 1 per pulled-forward sequencing."
+    stories:
+      - { id: "8.2", title: "Unit + integration test coverage pass across services/repositories (Vitest + Supertest)", size: L, status: backlog, maps_to: "NFR9" }
+      - { id: "8.3", title: "Playwright E2E suite incl. two-browser-context real-time collaboration test", size: L, status: backlog, maps_to: "NFR9" }
+      - { id: "8.4", title: "Accessibility audit & fixes: keyboard DnD, focus states, contrast check", size: M, status: backlog, maps_to: "NFR6" }
+      - { id: "8.5", title: "Performance pass: verify NFR1 (<200ms/300ms p95) and NFR2 (<1s) against seeded data volume", size: M, status: backlog, maps_to: "NFR1, NFR2" }
+      - { id: "8.7", title: "Production deployment: Vercel + Railway, environment separation, seeded demo workspace", size: M, status: backlog, maps_to: "Architecture §9, PRD §10" }
+      - { id: "8.8", title: "Account deletion flow implementing Architecture §4 cascade table incl. ownership-transfer step", size: M, status: backlog, maps_to: "FR40", notes: "Also needs the ownership-transfer UX design flagged as open in Architecture §10 risks" }
+      - { id: "8.9", title: "README + architecture summary for reviewers", size: S, status: backlog, maps_to: "PRD §10 success metric" }
+
+open_items_before_first_standup:
+  - "Confirm PRD §9 assumption #1 (solo developer) and #4 (target demo date) — affects whether these 13 sprints map to real calendar time."
+  - "Confirm PRD §9 assumption #3 (attachment size cap, assumed 10MB) before Sprint 9 / Story 4.8."
+  - "Fix Epics-and-Stories.md header ('Total: 8 epics, 46 stories' -> actual count is 63, 64 incl. 3.10 stretch) — cosmetic, non-blocking."
+  - "Decide whether to keep Story 3.10 (cross-board card move) in scope or formally descope per PRD §8 — currently placed last in Sprint 6 as a swappable/droppable item."
