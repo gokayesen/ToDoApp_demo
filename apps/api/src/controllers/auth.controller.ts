@@ -48,6 +48,13 @@ export const refreshHandler = asyncHandler(async (req: Request, res: Response) =
   }
 });
 
+export const logoutHandler = asyncHandler(async (req: Request, res: Response) => {
+  const presented = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+  await authService.logout(presented);
+  res.clearCookie(REFRESH_COOKIE_NAME, { path: '/auth' });
+  res.status(204).end();
+});
+
 // req.user is the Session object attached by the Passport verify callback
 // (session: false, so nothing goes through serializeUser/deserializeUser).
 export const googleCallbackHandler = asyncHandler(async (req: Request, res: Response) => {

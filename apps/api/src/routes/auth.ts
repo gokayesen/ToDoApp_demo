@@ -5,6 +5,7 @@ import { Router } from 'express';
 import {
   googleCallbackHandler,
   loginHandler,
+  logoutHandler,
   refreshHandler,
   registerHandler,
 } from '../controllers/auth.controller.js';
@@ -19,6 +20,7 @@ authRouter.use(authRateLimiter);
 authRouter.post('/register', validateBody(registerRequestSchema), registerHandler);
 authRouter.post('/login', validateBody(loginRequestSchema), loginHandler);
 authRouter.post('/refresh', refreshHandler);
+authRouter.post('/logout', logoutHandler);
 
 function requireGoogleOAuthConfigured(_req: Request, res: Response, next: NextFunction) {
   if (!isGoogleOAuthConfigured) {

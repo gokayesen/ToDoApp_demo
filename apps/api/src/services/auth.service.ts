@@ -88,6 +88,17 @@ export async function refresh(rawRefreshToken: string | undefined): Promise<Sess
   return issueSession(user, stored.familyId);
 }
 
+// Idempotent: an unknown/already-invalid token just means the session is
+// already effectively logged out, not an error worth surfacing to the caller.
+export async function logout(rawRefreshToken: string | undefined): Promise<void> {
+  if (!rawRefreshToken) return;
+
+  const stored = await findRefreshTokenByHash(hashRefreshToken(rawRefreshToken));
+  if (!stored) return;
+
+  await revokeRefreshTokenFamily(stored.familyId);
+}
+
 // Architecture §7.3: match an existing linked OAuthAccount first; else link by
 // verified email to an existing User (never create a duplicate); else create new.
 export async function loginOrRegisterWithGoogle(profile: GoogleProfile): Promise<Session> {
