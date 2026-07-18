@@ -47,3 +47,15 @@ export const refreshHandler = asyncHandler(async (req: Request, res: Response) =
     throw err;
   }
 });
+
+// req.user is the Session object attached by the Passport verify callback
+// (session: false, so nothing goes through serializeUser/deserializeUser).
+export const googleCallbackHandler = asyncHandler(async (req: Request, res: Response) => {
+  const session = req.user as authService.Session;
+  res.cookie(REFRESH_COOKIE_NAME, session.rawRefreshToken, refreshCookieOptions);
+
+  const webOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+  const redirectUrl = new URL('/auth/callback', webOrigin);
+  redirectUrl.searchParams.set('accessToken', session.accessToken);
+  res.redirect(redirectUrl.toString());
+});

@@ -9,6 +9,7 @@ import {
   hashRefreshToken,
   refreshTokenExpiry,
 } from '../lib/refresh-token.js';
+import { createOAuthAccount, findOAuthAccount } from '../repositories/oauth-account.repository.js';
 import {
   createRefreshToken,
   findRefreshTokenByHash,
@@ -21,6 +22,14 @@ export interface Session {
   user: User;
   accessToken: string;
   rawRefreshToken: string;
+}
+
+export interface GoogleProfile {
+  providerAccountId: string;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  avatarUrl?: string;
 }
 
 async function issueSession(user: User, familyId?: string): Promise<Session> {
@@ -77,4 +86,42 @@ export async function refresh(rawRefreshToken: string | undefined): Promise<Sess
 
   await revokeRefreshToken(stored.id);
   return issueSession(user, stored.familyId);
+}
+
+// Architecture §7.3: match an existing linked OAuthAccount first; else link by
+// verified email to an existing User (never create a duplicate); else create new.
+export async function loginOrRegisterWithGoogle(profile: GoogleProfile): Promise<Session> {
+  const existingLink = await findOAuthAccount('google', profile.providerAccountId);
+  if (existingLink) return issueSession(existingLink.user);
+
+  const existingUser = await findUserByEmail(profile.email);
+  if (existingUser) {
+    if (!profile.emailVerified) {
+      // Don't silently take over an existing account, and don't let an unhandled
+      // DB unique-constraint error leak out either — same email, unverified claim.
+      throw new HttpError(
+        409,
+        'An account with this email already exists. Sign in with your password, or verify this email with Google first.',
+      );
+    }
+    await createOAuthAccount({
+      userId: existingUser.id,
+      provider: 'google',
+      providerAccountId: profile.providerAccountId,
+    });
+    return issueSession(existingUser);
+  }
+
+  const user = await createUser({
+    email: profile.email,
+    name: profile.name,
+    avatarUrl: profile.avatarUrl,
+  });
+  await createOAuthAccount({
+    userId: user.id,
+    provider: 'google',
+    providerAccountId: profile.providerAccountId,
+  });
+
+  return issueSession(user);
 }

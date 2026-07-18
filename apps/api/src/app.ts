@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { errorHandler } from './middleware/error-handler.js';
+import { passport } from './lib/passport.js';
 import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 
@@ -14,6 +15,7 @@ export function createApp() {
   app.use(cors({ credentials: true, origin: process.env.CORS_ORIGIN }));
   app.use(express.json());
   app.use(cookieParser());
+  app.use(passport.initialize());
 
   app.use('/health', healthRouter);
   app.use('/auth', authRouter);

@@ -4,7 +4,12 @@ export function findUserByEmail(email: string) {
   return prisma.user.findUnique({ where: { email } });
 }
 
-export function createUser(input: { email: string; passwordHash: string; name: string }) {
+export function createUser(input: {
+  email: string;
+  name: string;
+  passwordHash?: string;
+  avatarUrl?: string;
+}) {
   return prisma.user.create({ data: input });
 }
 
