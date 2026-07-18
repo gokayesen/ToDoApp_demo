@@ -1,15 +1,24 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
+import { errorHandler } from './middleware/error-handler.js';
+import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 
 export function createApp() {
   const app = express();
 
-  app.use(cors({ credentials: true }));
+  // Explicit non-wildcard origin: required for credentialed cross-origin requests
+  // (Architecture §7.1) — wildcard + credentials:true is rejected by browsers anyway.
+  app.use(cors({ credentials: true, origin: process.env.CORS_ORIGIN }));
   app.use(express.json());
+  app.use(cookieParser());
 
   app.use('/health', healthRouter);
+  app.use('/auth', authRouter);
+
+  app.use(errorHandler);
 
   return app;
 }

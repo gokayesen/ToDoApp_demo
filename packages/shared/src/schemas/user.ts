@@ -7,3 +7,24 @@ export const registerRequestSchema = z.object({
 });
 
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+
+export const loginRequestSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export type LoginRequest = z.infer<typeof loginRequestSchema>;
+
+export const userProfileSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+
+export const authResponseSchema = z.object({
+  accessToken: z.string(),
+  user: userProfileSchema,
+});
+
+export type AuthResponse = z.infer<typeof authResponseSchema>;
