@@ -32,3 +32,10 @@ export function revokeRefreshTokenFamily(familyId: string) {
     data: { revokedAt: new Date() },
   });
 }
+
+export function revokeAllRefreshTokensForUser(userId: string) {
+  return prisma.refreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}

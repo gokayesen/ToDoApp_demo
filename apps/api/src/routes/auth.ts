@@ -1,13 +1,20 @@
-import { loginRequestSchema, registerRequestSchema } from '@todoapp/shared';
+import {
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  registerRequestSchema,
+  resetPasswordRequestSchema,
+} from '@todoapp/shared';
 import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
 
 import {
+  forgotPasswordHandler,
   googleCallbackHandler,
   loginHandler,
   logoutHandler,
   refreshHandler,
   registerHandler,
+  resetPasswordHandler,
 } from '../controllers/auth.controller.js';
 import { isGoogleOAuthConfigured, passport } from '../lib/passport.js';
 import { authRateLimiter } from '../middleware/rate-limit.js';
@@ -21,6 +28,12 @@ authRouter.post('/register', validateBody(registerRequestSchema), registerHandle
 authRouter.post('/login', validateBody(loginRequestSchema), loginHandler);
 authRouter.post('/refresh', refreshHandler);
 authRouter.post('/logout', logoutHandler);
+authRouter.post(
+  '/forgot-password',
+  validateBody(forgotPasswordRequestSchema),
+  forgotPasswordHandler,
+);
+authRouter.post('/reset-password', validateBody(resetPasswordRequestSchema), resetPasswordHandler);
 
 function requireGoogleOAuthConfigured(_req: Request, res: Response, next: NextFunction) {
   if (!isGoogleOAuthConfigured) {

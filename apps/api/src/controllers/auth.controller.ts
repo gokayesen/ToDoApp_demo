@@ -55,6 +55,16 @@ export const logoutHandler = asyncHandler(async (req: Request, res: Response) =>
   res.status(204).end();
 });
 
+export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  await authService.requestPasswordReset(req.body);
+  res.status(204).end();
+});
+
+export const resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  await authService.resetPassword(req.body);
+  res.status(204).end();
+});
+
 // req.user is the Session object attached by the Passport verify callback
 // (session: false, so nothing goes through serializeUser/deserializeUser).
 export const googleCallbackHandler = asyncHandler(async (req: Request, res: Response) => {
