@@ -35,6 +35,11 @@ import {
   findUserById,
   updateUserPassword,
 } from '../repositories/user.repository.js';
+import { addWorkspaceMember } from '../repositories/workspace-member.repository.js';
+import {
+  findPendingWorkspaceInvitesByEmail,
+  markWorkspaceInviteAccepted,
+} from '../repositories/workspace-invite.repository.js';
 
 export interface Session {
   user: User;
@@ -72,7 +77,20 @@ export async function register(input: RegisterRequest): Promise<Session> {
     passwordHash: await hashPassword(input.password),
   });
 
+  await resolvePendingWorkspaceInvites(user.id, user.email);
+
   return issueSession(user);
+}
+
+// Story 2.3: an email invited to a Workspace before it had an account joins
+// that Workspace automatically the moment registration completes.
+async function resolvePendingWorkspaceInvites(userId: string, email: string): Promise<void> {
+  const pendingInvites = await findPendingWorkspaceInvitesByEmail(email);
+
+  for (const invite of pendingInvites) {
+    await addWorkspaceMember(invite.workspaceId, userId);
+    await markWorkspaceInviteAccepted(invite.id);
+  }
 }
 
 export async function login(input: LoginRequest): Promise<Session> {
@@ -151,6 +169,7 @@ export async function loginOrRegisterWithGoogle(profile: GoogleProfile): Promise
     provider: 'google',
     providerAccountId: profile.providerAccountId,
   });
+  await resolvePendingWorkspaceInvites(user.id, user.email);
 
   return issueSession(user);
 }

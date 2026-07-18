@@ -37,6 +37,7 @@ model User {
   ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   boardMemberships     BoardMember[]
+  sentWorkspaceInvites WorkspaceInvite[]     @relation("WorkspaceInviteSender")
 }
 
 model OAuthAccount {
@@ -83,6 +84,25 @@ model Workspace {
   owner   User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   members WorkspaceMember[]
   boards  Board[]
+  invites WorkspaceInvite[]
+}
+
+// Only created for an email with no existing User (Story 2.3, FR7) — inviting an
+// already-registered email adds a WorkspaceMember row directly instead, since
+// there's nothing left "pending" once the account already exists.
+model WorkspaceInvite {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @db.Uuid
+  email           String
+  invitedByUserId String    @db.Uuid
+  tokenHash       String
+  expiresAt       DateTime
+  acceptedAt      DateTime? // single-use marker, set when registration resolves this invite
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("WorkspaceInviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([email])
 }
 
 model WorkspaceMember {

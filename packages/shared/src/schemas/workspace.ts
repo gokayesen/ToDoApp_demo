@@ -13,3 +13,9 @@ export const workspaceSchema = z.object({
 });
 
 export type Workspace = z.infer<typeof workspaceSchema>;
+
+export const inviteWorkspaceMemberRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+export type InviteWorkspaceMemberRequest = z.infer<typeof inviteWorkspaceMemberRequestSchema>;

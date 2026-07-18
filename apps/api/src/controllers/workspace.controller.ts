@@ -12,3 +12,8 @@ export const listWorkspacesHandler = asyncHandler(async (req: Request, res: Resp
   const workspaces = await workspaceService.listWorkspaces(req.userId!);
   res.json(workspaces);
 });
+
+export const inviteWorkspaceMemberHandler = asyncHandler(async (req: Request, res: Response) => {
+  const result = await workspaceService.inviteMember(req.userId!, req.params.workspaceId!, req.body);
+  res.status(202).json(result);
+});
