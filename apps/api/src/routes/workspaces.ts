@@ -1,6 +1,11 @@
-import { createWorkspaceRequestSchema, inviteWorkspaceMemberRequestSchema } from '@todoapp/shared';
+import {
+  createBoardRequestSchema,
+  createWorkspaceRequestSchema,
+  inviteWorkspaceMemberRequestSchema,
+} from '@todoapp/shared';
 import { Router } from 'express';
 
+import { createBoardHandler } from '../controllers/board.controller.js';
 import {
   createWorkspaceHandler,
   inviteWorkspaceMemberHandler,
@@ -19,4 +24,9 @@ workspacesRouter.post(
   '/:workspaceId/invites',
   validateBody(inviteWorkspaceMemberRequestSchema),
   inviteWorkspaceMemberHandler,
+);
+workspacesRouter.post(
+  '/:workspaceId/boards',
+  validateBody(createBoardRequestSchema),
+  createBoardHandler,
 );
