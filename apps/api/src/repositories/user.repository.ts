@@ -20,3 +20,7 @@ export function findUserById(id: string) {
 export function updateUserPassword(id: string, passwordHash: string) {
   return prisma.user.update({ where: { id }, data: { passwordHash } });
 }
+
+export function updateUserProfile(id: string, input: { name?: string; avatarUrl?: string | null }) {
+  return prisma.user.update({ where: { id }, data: input });
+}

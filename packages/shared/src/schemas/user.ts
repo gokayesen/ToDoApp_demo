@@ -41,3 +41,10 @@ export const resetPasswordRequestSchema = z.object({
 });
 
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+
+export const updateProfileRequestSchema = z.object({
+  name: z.string().min(1).optional(),
+  avatarUrl: z.string().url().nullable().optional(),
+});
+
+export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
