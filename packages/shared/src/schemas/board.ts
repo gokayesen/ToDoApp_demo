@@ -24,3 +24,9 @@ export const inviteBoardMemberRequestSchema = z.object({
 });
 
 export type InviteBoardMemberRequest = z.infer<typeof inviteBoardMemberRequestSchema>;
+
+export const updateBoardMemberRoleRequestSchema = z.object({
+  role: boardRoleSchema,
+});
+
+export type UpdateBoardMemberRoleRequest = z.infer<typeof updateBoardMemberRoleRequestSchema>;

@@ -1,15 +1,26 @@
 import type { Board } from '@prisma/client';
-import type { CreateBoardRequest, InviteBoardMemberRequest } from '@todoapp/shared';
+import type {
+  CreateBoardRequest,
+  InviteBoardMemberRequest,
+  UpdateBoardMemberRoleRequest,
+} from '@todoapp/shared';
 
 import { sendBoardInviteEmail, sendBoardMemberAddedEmail } from '../lib/email.js';
 import { HttpError } from '../lib/http-error.js';
 import { generateRawInviteToken, hashInviteToken, inviteTokenExpiry } from '../lib/invite-token.js';
-import { addBoardMember, findBoardMember } from '../repositories/board-member.repository.js';
+import {
+  addBoardMember,
+  findBoardMember,
+  removeBoardMember as removeBoardMemberRow,
+  updateBoardMemberRole,
+} from '../repositories/board-member.repository.js';
 import { createBoardForWorkspace } from '../repositories/board.repository.js';
 import { createBoardInvite } from '../repositories/board-invite.repository.js';
 import { findUserByEmail } from '../repositories/user.repository.js';
 import { findWorkspaceMember } from '../repositories/workspace-member.repository.js';
 import { findWorkspaceById } from '../repositories/workspace.repository.js';
+import { ROLE_RANK } from '../middleware/require-role.js';
+import { emitBoardAccessRevoked } from '../sockets/board-access.js';
 
 // FR8: any Workspace member (Owner or Member) can create a Board. A Workspace
 // Owner already gets implicit Board Admin per Architecture §7.4, so no explicit
@@ -81,4 +92,49 @@ export async function inviteBoardMember(
   await sendBoardInviteEmail(input.email, board.name, registerUrl.toString());
 
   return { status: 'invited' as const };
+}
+
+// Architecture §7.4: Owner access is derived, not stored, so it can't be
+// downgraded/removed through the BoardMember row — there isn't one. Shared by
+// both changeBoardMemberRole and removeBoardMember below.
+async function assertNotWorkspaceOwner(board: Board, targetUserId: string): Promise<void> {
+  const workspace = await findWorkspaceById(board.workspaceId);
+  if (workspace?.ownerId === targetUserId) {
+    throw new HttpError(
+      400,
+      "Workspace Owners can't be removed from a Board directly; remove them from the Workspace instead",
+    );
+  }
+}
+
+// FR10: requireRole('ADMIN') on the route already confirms the caller is a
+// Board Admin. A downgrade triggers the Architecture §6 eviction flow (stubbed
+// until Story 5.1's Socket.io gateway exists — see sockets/board-access.ts).
+export async function changeBoardMemberRole(
+  board: Board,
+  targetUserId: string,
+  input: UpdateBoardMemberRoleRequest,
+) {
+  await assertNotWorkspaceOwner(board, targetUserId);
+
+  const membership = await findBoardMember(board.id, targetUserId);
+  if (!membership) throw new HttpError(404, 'This user is not a member of the board');
+
+  const updated = await updateBoardMemberRole(board.id, targetUserId, input.role);
+
+  if (ROLE_RANK[input.role] < ROLE_RANK[membership.role]) {
+    emitBoardAccessRevoked(board.id, targetUserId);
+  }
+
+  return updated;
+}
+
+export async function removeBoardMember(board: Board, targetUserId: string) {
+  await assertNotWorkspaceOwner(board, targetUserId);
+
+  const membership = await findBoardMember(board.id, targetUserId);
+  if (!membership) throw new HttpError(404, 'This user is not a member of the board');
+
+  await removeBoardMemberRow(board.id, targetUserId);
+  emitBoardAccessRevoked(board.id, targetUserId);
 }

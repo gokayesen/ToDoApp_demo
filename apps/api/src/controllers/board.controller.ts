@@ -13,3 +13,17 @@ export const inviteBoardMemberHandler = asyncHandler(async (req: Request, res: R
   const result = await boardService.inviteBoardMember(req.userId!, req.board!, req.body);
   res.status(202).json(result);
 });
+
+export const changeBoardMemberRoleHandler = asyncHandler(async (req: Request, res: Response) => {
+  const membership = await boardService.changeBoardMemberRole(
+    req.board!,
+    req.params.userId!,
+    req.body,
+  );
+  res.json(membership);
+});
+
+export const removeBoardMemberHandler = asyncHandler(async (req: Request, res: Response) => {
+  await boardService.removeBoardMember(req.board!, req.params.userId!);
+  res.status(204).end();
+});

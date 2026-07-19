@@ -1,7 +1,7 @@
 import type { BoardRole } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 
-const ROLE_RANK: Record<BoardRole, number> = { VIEWER: 0, MEMBER: 1, ADMIN: 2 };
+export const ROLE_RANK: Record<BoardRole, number> = { VIEWER: 0, MEMBER: 1, ADMIN: 2 };
 
 // Must run after loadBoardContext, which sets req.boardRole. Compares the
 // effective role it resolved against the route's declared minimum — the only
