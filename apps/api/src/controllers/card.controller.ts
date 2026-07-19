@@ -22,3 +22,13 @@ export const moveCardHandler = asyncHandler(async (req: Request, res: Response) 
   const card = await cardService.moveCard(req.card!, req.list!, req.body);
   res.json(card);
 });
+
+export const archiveCardHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.archiveCard(req.card!);
+  res.json(card);
+});
+
+export const restoreCardHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.restoreCard(req.card!);
+  res.json(card);
+});

@@ -1,7 +1,12 @@
 import { moveCardRequestSchema } from '@todoapp/shared';
 import { Router } from 'express';
 
-import { deleteCardHandler, moveCardHandler } from '../controllers/card.controller.js';
+import {
+  archiveCardHandler,
+  deleteCardHandler,
+  moveCardHandler,
+  restoreCardHandler,
+} from '../controllers/card.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadCardContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -19,3 +24,7 @@ cardsRouter.post(
   validateBody(moveCardRequestSchema),
   moveCardHandler,
 );
+// FR21: "Board members can archive and restore Cards" — same MEMBER gate as
+// every other Card mutation above.
+cardsRouter.post('/:cardId/archive', requireRole('MEMBER'), archiveCardHandler);
+cardsRouter.post('/:cardId/restore', requireRole('MEMBER'), restoreCardHandler);

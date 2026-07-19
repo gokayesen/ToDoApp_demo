@@ -9,6 +9,7 @@ import {
   findCardById,
   findLastCardPosition,
   listCardsForList,
+  setCardArchived,
   updateCardPosition,
 } from '../repositories/card.repository.js';
 import { findListById } from '../repositories/list.repository.js';
@@ -28,6 +29,18 @@ export function listCards(list: List) {
 
 export async function deleteCard(card: Card): Promise<void> {
   await deleteCardRow(card.id);
+}
+
+// FR21: requireRole('MEMBER') on the route already excludes Viewers.
+// Idempotent, same rationale as board.service.ts archiveBoard/restoreBoard
+// and list.service.ts archiveList/restoreList — re-affirming an already-
+// (non)archived state isn't a meaningful conflict.
+export function archiveCard(card: Card): Promise<Card> {
+  return setCardArchived(card.id, true);
+}
+
+export function restoreCard(card: Card): Promise<Card> {
+  return setCardArchived(card.id, false);
 }
 
 // FR19: reorders/moves happen relative to live neighbors on the target List,

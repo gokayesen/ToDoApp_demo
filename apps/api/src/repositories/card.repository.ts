@@ -38,6 +38,18 @@ export function deleteCard(id: string) {
   return prisma.card.delete({ where: { id } });
 }
 
+// Story 3.8 (FR21) direct per-Card archive/restore, distinct from the Story
+// 3.7 List-archive cascade below. Restoring always clears archivedWithList
+// too — once a Card is explicitly restored on its own, it's no longer
+// tracking a cascade it might otherwise be swept back into by an unrelated
+// future List restore.
+export function setCardArchived(id: string, isArchived: boolean, client: Client = prisma) {
+  return client.card.update({
+    where: { id },
+    data: isArchived ? { isArchived: true } : { isArchived: false, archivedWithList: false },
+  });
+}
+
 // Story 3.7 (FR16) List archive cascade: only touches Cards that are
 // currently active, so a Card a user independently archived beforehand (once
 // Story 3.8 exists) is left alone rather than double-marked.
