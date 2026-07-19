@@ -52,6 +52,14 @@ export async function createBoard(userId: string, workspaceId: string, input: Cr
   return board;
 }
 
+// Board View (Story 3.3): requireRole('VIEWER') on the route already confirms
+// access; loadBoardContext already fetched the row, so this is a passthrough
+// kept as a service function for the same controller->service convention as
+// every other handler.
+export function getBoard(board: Board) {
+  return board;
+}
+
 // FR39: the Dashboard's per-workspace board grid. Same visibility split as
 // createBoard's membership check — Owner sees every non-archived Board,
 // everyone else only the ones they have an explicit BoardMember row on.

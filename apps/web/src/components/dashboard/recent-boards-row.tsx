@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { getRecentBoards, type RecentBoard } from '@/lib/recent-boards';
@@ -20,12 +21,13 @@ export function RecentBoardsRow() {
       <h2 className="text-sm font-medium text-muted-foreground">Recently viewed</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {recent.map((board) => (
-          <div
+          <Link
             key={board.id}
+            href={`/boards/${board.id}`}
             className="flex h-24 flex-col justify-end rounded-lg bg-muted p-3 ring-1 ring-foreground/10"
           >
             <span className="truncate text-sm font-medium text-foreground">{board.name}</span>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

@@ -8,6 +8,10 @@ export const createBoardHandler = asyncHandler(async (req: Request, res: Respons
   res.status(201).json(board);
 });
 
+export const getBoardHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.json(boardService.getBoard(req.board!));
+});
+
 export const listBoardsHandler = asyncHandler(async (req: Request, res: Response) => {
   const boards = await boardService.listBoards(req.userId!, req.params.workspaceId!);
   res.json(boards);

@@ -11,6 +11,7 @@ import {
   archiveBoardHandler,
   changeBoardMemberRoleHandler,
   deleteBoardHandler,
+  getBoardHandler,
   inviteBoardMemberHandler,
   removeBoardMemberHandler,
   restoreBoardHandler,
@@ -27,6 +28,7 @@ export const boardsRouter = Router();
 boardsRouter.use(authenticate);
 boardsRouter.use('/:boardId', loadBoardContext);
 
+boardsRouter.get('/:boardId', requireRole('VIEWER'), getBoardHandler);
 boardsRouter.post(
   '/:boardId/invites',
   requireRole('ADMIN'),
