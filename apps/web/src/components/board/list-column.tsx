@@ -1,11 +1,9 @@
 'use client';
 
-import type { List } from '@todoapp/shared';
+import type { Card, List } from '@todoapp/shared';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
-import { listCards } from '@/lib/board-api';
 import { CardItem } from './card-item';
 import { QuickAddCardForm } from './quick-add-card-form';
 
@@ -15,16 +13,36 @@ import { QuickAddCardForm } from './quick-add-card-form';
 //
 // UX §5 "lists reorder via drag on their header": the header is the sortable
 // handle (not the whole column), so dragging never conflicts with clicking
-// cards or the quick-add form below it.
-export function ListColumn({ list, index }: { list: List; index: number }) {
-  const { data: cards, isLoading } = useQuery({
-    queryKey: ['cards', list.id],
-    queryFn: () => listCards(list.id),
-  });
-
+// cards or the quick-add form below it. Cards and Lists share one drag
+// context (board-lists.tsx) distinguished by `type`; `accept: ['list', 'card']`
+// lets this column's own sortable region double as the cross-list drop target
+// for an empty list (Story 3.6, FR19) since it has no Card of its own to
+// collide against.
+export function ListColumn({
+  list,
+  index,
+  cards,
+  isLoading,
+  otherLists,
+  onMoveToList,
+}: {
+  list: List;
+  index: number;
+  cards: Card[];
+  isLoading: boolean;
+  otherLists: List[];
+  onMoveToList: (cardId: string, targetListId: string) => void;
+}) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLHeadingElement>(null);
-  const { isDragging } = useSortable({ id: list.id, index, element, handle: handleRef });
+  const { isDragging } = useSortable({
+    id: list.id,
+    index,
+    type: 'list',
+    accept: ['list', 'card'],
+    element,
+    handle: handleRef,
+  });
 
   return (
     <div
@@ -43,7 +61,16 @@ export function ListColumn({ list, index }: { list: List; index: number }) {
         {isLoading ? (
           <p className="px-1 text-sm text-muted-foreground">Loading…</p>
         ) : (
-          cards?.map((card) => <CardItem key={card.id} card={card} />)
+          cards.map((card, cardIndex) => (
+            <CardItem
+              key={card.id}
+              card={card}
+              index={cardIndex}
+              listId={list.id}
+              otherLists={otherLists}
+              onMoveToList={onMoveToList}
+            />
+          ))
         )}
       </div>
       <QuickAddCardForm listId={list.id} />

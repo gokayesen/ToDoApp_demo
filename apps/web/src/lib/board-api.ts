@@ -4,6 +4,7 @@ import type {
   CreateCardRequest,
   CreateListRequest,
   List,
+  MoveCardRequest,
   MoveListRequest,
 } from '@todoapp/shared';
 
@@ -37,6 +38,13 @@ export function listCards(listId: string) {
 
 export function createCard(listId: string, input: CreateCardRequest) {
   return apiFetch<Card>(`/lists/${listId}/cards`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function moveCard(cardId: string, input: MoveCardRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/move`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

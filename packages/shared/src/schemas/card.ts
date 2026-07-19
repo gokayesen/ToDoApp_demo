@@ -6,6 +6,17 @@ export const createCardRequestSchema = z.object({
 
 export type CreateCardRequest = z.infer<typeof createCardRequestSchema>;
 
+// Architecture §4 "Ordering strategy": same target-neighbor intent as
+// moveListRequestSchema, plus the target listId since a Card move can cross
+// Lists (never a client-submitted position; the server recomputes it).
+export const moveCardRequestSchema = z.object({
+  listId: z.string().uuid(),
+  afterCardId: z.string().uuid().nullable(),
+  beforeCardId: z.string().uuid().nullable(),
+});
+
+export type MoveCardRequest = z.infer<typeof moveCardRequestSchema>;
+
 export const cardSchema = z.object({
   id: z.string().uuid(),
   listId: z.string().uuid(),

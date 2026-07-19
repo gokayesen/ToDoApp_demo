@@ -17,3 +17,8 @@ export const deleteCardHandler = asyncHandler(async (req: Request, res: Response
   await cardService.deleteCard(req.card!);
   res.status(204).end();
 });
+
+export const moveCardHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.moveCard(req.card!, req.list!, req.body);
+  res.json(card);
+});
