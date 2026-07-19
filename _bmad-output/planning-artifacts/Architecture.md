@@ -238,9 +238,21 @@ erDiagram
         timestamp expiresAt
         timestamp acceptedAt "nullable, single-use marker"
     }
+    BoardInvite {
+        uuid id PK
+        uuid boardId FK
+        string email
+        enum role "ADMIN, MEMBER, VIEWER"
+        uuid invitedByUserId FK
+        string tokenHash
+        timestamp expiresAt
+        timestamp acceptedAt "nullable, single-use marker"
+    }
 ```
 
 **Workspace invites (Story 2.3, FR7):** only the Workspace Owner can invite, by email. If the email already belongs to a `User`, a `WorkspaceMember` row (`MEMBER`) is created immediately — there is nothing left "pending" once the account exists. If it doesn't, a `WorkspaceInvite` row is created (`tokenHash`/`expiresAt` follow the same pattern as `PasswordResetToken`, 7-day TTL) and an email is sent with a registration link; the invite auto-resolves into a `WorkspaceMember` row the moment that email completes registration (password or Google), setting `acceptedAt`. No separate accept-invite endpoint exists — resolution is implicit in the registration flow. `WorkspaceInvite` cascades on `Workspace` delete and on the inviter's `User` delete (`onDelete: Cascade` for both), matching the compositional-data row in the cascade table below.
+
+**Board invites (Story 2.5, FR9):** same shape and resolution mechanics as Workspace invites, gated by `requireRole('ADMIN')` on the inviting Board Admin (explicit `BoardMember` row or a Workspace Owner's implicit one, §7.4) instead of Workspace-Owner-only, and carrying an explicit `role` (Admin/Member/Viewer) chosen at invite time rather than a fixed `MEMBER`. Inviting an email that belongs to the board's Workspace Owner is rejected with `400` — that user already has implicit Admin on every Board in the Workspace, and an explicit `BoardMember` row for them would be redundant (and, if given a role below Admin, actively misleading about their real access level).
 
 **Ordering strategy (Lists & Cards):** `position` is a float, but it is **always computed server-side, inside the same transaction as the write** — the client never submits a raw position value. The move/reorder endpoints accept a target-neighbor intent (`afterCardId` / `beforeCardId`, nullable for start/end-of-list), and the server re-reads those neighbors' current `position` values at write time and sets `position = (prev + next) / 2` (fractional indexing, same technique used by Figma/Linear) before committing. This closes the concurrency gap where two clients could otherwise compute overlapping positions from stale neighbor data. A background job rebalances positions for a list only if float precision is exhausted (practically never at portfolio-scale data volumes; see job execution strategy in §9). This keeps every drag-and-drop move an **O(1) single-row write** wrapped in a DB transaction with the moved row's board/list foreign keys re-validated — satisfying NFR1 (latency) and NFR8 (atomicity/no lost cards) together.
 
@@ -251,6 +263,7 @@ erDiagram
 | `WorkspaceMember`, `BoardMember`, `CardAssignee` → `User` | **Cascade** | Pure membership rows; no reason to keep them once the user is gone |
 | `RefreshToken`, `PasswordResetToken`, `NotificationPreference` → `User` | **Cascade** | Purely personal, never shared with other users |
 | `WorkspaceInvite` → `Workspace`, `WorkspaceInvite.invitedByUserId` → `User` | **Cascade** | An invite has no meaning once its Workspace is gone, or once the inviter's account is gone |
+| `BoardInvite` → `Board`, `BoardInvite.invitedByUserId` → `User` | **Cascade** | Same rationale as `WorkspaceInvite`, scoped to a Board |
 | `Comment.userId`, `Attachment.uploaderId`, `ActivityLog.userId` → `User` | **SetNull** (FK nullable) + denormalized name snapshot captured at creation time | Preserves shared board history — including the audit trail itself — for teammates even after the author/actor deletes their account (PRD FR40). Without this, account deletion would fail with an FK constraint error for virtually every real user, since almost any board action writes an `ActivityLog` row |
 | `Board`, `List`, `Card`, `Label`, `Checklist`, `ChecklistItem` → parent (`Workspace`/`Board`/`List`/`Card`) | **Cascade** | Compositional data — e.g. a Card's Checklist has no meaning without the Card |
 | `Workspace.ownerId` → `User` | **Restrict** | Deleting the last owner of a Workspace with other members must force an explicit ownership-transfer step first, not silently cascade or orphan the Workspace |

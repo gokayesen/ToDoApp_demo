@@ -15,3 +15,12 @@ export const boardSchema = z.object({
 });
 
 export type Board = z.infer<typeof boardSchema>;
+
+export const boardRoleSchema = z.enum(['ADMIN', 'MEMBER', 'VIEWER']);
+
+export const inviteBoardMemberRequestSchema = z.object({
+  email: z.string().email(),
+  role: boardRoleSchema,
+});
+
+export type InviteBoardMemberRequest = z.infer<typeof inviteBoardMemberRequestSchema>;

@@ -38,6 +38,7 @@ model User {
   workspaceMemberships WorkspaceMember[]
   boardMemberships     BoardMember[]
   sentWorkspaceInvites WorkspaceInvite[]     @relation("WorkspaceInviteSender")
+  sentBoardInvites     BoardInvite[]         @relation("BoardInviteSender")
 }
 
 model OAuthAccount {
@@ -125,6 +126,7 @@ model Board {
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members   BoardMember[]
+  invites   BoardInvite[]
 }
 
 model BoardMember {
@@ -136,4 +138,24 @@ model BoardMember {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([boardId, userId])
+}
+
+// Only created for an email with no existing User (Story 2.5, FR9) — same
+// pattern as WorkspaceInvite (Story 2.3): an already-registered email is added
+// as a BoardMember directly, with the requested role, instead of going through
+// a pending row.
+model BoardInvite {
+  id              String    @id @default(uuid()) @db.Uuid
+  boardId         String    @db.Uuid
+  email           String
+  role            BoardRole
+  invitedByUserId String    @db.Uuid
+  tokenHash       String
+  expiresAt       DateTime
+  acceptedAt      DateTime? // single-use marker, set when registration resolves this invite
+
+  board     Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("BoardInviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([email])
 }

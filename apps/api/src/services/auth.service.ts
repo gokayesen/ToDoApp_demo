@@ -16,6 +16,11 @@ import {
   refreshTokenExpiry,
 } from '../lib/refresh-token.js';
 import { generateRawResetToken, hashResetToken, resetTokenExpiry } from '../lib/reset-token.js';
+import {
+  findPendingBoardInvitesByEmail,
+  markBoardInviteAccepted,
+} from '../repositories/board-invite.repository.js';
+import { addBoardMember } from '../repositories/board-member.repository.js';
 import { createOAuthAccount, findOAuthAccount } from '../repositories/oauth-account.repository.js';
 import {
   createPasswordResetToken,
@@ -35,11 +40,11 @@ import {
   findUserById,
   updateUserPassword,
 } from '../repositories/user.repository.js';
-import { addWorkspaceMember } from '../repositories/workspace-member.repository.js';
 import {
   findPendingWorkspaceInvitesByEmail,
   markWorkspaceInviteAccepted,
 } from '../repositories/workspace-invite.repository.js';
+import { addWorkspaceMember } from '../repositories/workspace-member.repository.js';
 
 export interface Session {
   user: User;
@@ -77,19 +82,24 @@ export async function register(input: RegisterRequest): Promise<Session> {
     passwordHash: await hashPassword(input.password),
   });
 
-  await resolvePendingWorkspaceInvites(user.id, user.email);
+  await resolvePendingInvites(user.id, user.email);
 
   return issueSession(user);
 }
 
-// Story 2.3: an email invited to a Workspace before it had an account joins
-// that Workspace automatically the moment registration completes.
-async function resolvePendingWorkspaceInvites(userId: string, email: string): Promise<void> {
-  const pendingInvites = await findPendingWorkspaceInvitesByEmail(email);
-
-  for (const invite of pendingInvites) {
+// Story 2.3 / 2.5: an email invited to a Workspace or Board before it had an
+// account joins automatically the moment registration completes.
+async function resolvePendingInvites(userId: string, email: string): Promise<void> {
+  const pendingWorkspaceInvites = await findPendingWorkspaceInvitesByEmail(email);
+  for (const invite of pendingWorkspaceInvites) {
     await addWorkspaceMember(invite.workspaceId, userId);
     await markWorkspaceInviteAccepted(invite.id);
+  }
+
+  const pendingBoardInvites = await findPendingBoardInvitesByEmail(email);
+  for (const invite of pendingBoardInvites) {
+    await addBoardMember(invite.boardId, userId, invite.role);
+    await markBoardInviteAccepted(invite.id);
   }
 }
 
@@ -169,7 +179,7 @@ export async function loginOrRegisterWithGoogle(profile: GoogleProfile): Promise
     provider: 'google',
     providerAccountId: profile.providerAccountId,
   });
-  await resolvePendingWorkspaceInvites(user.id, user.email);
+  await resolvePendingInvites(user.id, user.email);
 
   return issueSession(user);
 }

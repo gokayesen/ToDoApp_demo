@@ -50,3 +50,35 @@ export async function sendWorkspaceMemberAddedEmail(to: string, workspaceName: s
     html: `<p>You've been added to the <strong>${workspaceName}</strong> workspace.</p>`,
   });
 }
+
+export async function sendBoardInviteEmail(
+  to: string,
+  boardName: string,
+  registerUrl: string,
+): Promise<void> {
+  if (!resend) {
+    console.log(`[email:dev] board invite for ${to} (${boardName}): ${registerUrl}`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM ?? 'ToDoApp <onboarding@resend.dev>',
+    to,
+    subject: `You've been invited to the board "${boardName}" on ToDoApp`,
+    html: `<p>You've been invited to the <strong>${boardName}</strong> board. Create an account to join:</p><p><a href="${registerUrl}">${registerUrl}</a></p><p>This invite expires in 7 days.</p>`,
+  });
+}
+
+export async function sendBoardMemberAddedEmail(to: string, boardName: string): Promise<void> {
+  if (!resend) {
+    console.log(`[email:dev] added ${to} to board ${boardName}`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM ?? 'ToDoApp <onboarding@resend.dev>',
+    to,
+    subject: `You've been added to "${boardName}" on ToDoApp`,
+    html: `<p>You've been added to the <strong>${boardName}</strong> board.</p>`,
+  });
+}

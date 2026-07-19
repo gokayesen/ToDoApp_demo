@@ -5,6 +5,7 @@ import express from 'express';
 import { errorHandler } from './middleware/error-handler.js';
 import { passport } from './lib/passport.js';
 import { authRouter } from './routes/auth.js';
+import { boardsRouter } from './routes/boards.js';
 import { healthRouter } from './routes/health.js';
 import { usersRouter } from './routes/users.js';
 import { workspacesRouter } from './routes/workspaces.js';
@@ -23,6 +24,7 @@ export function createApp() {
   app.use('/auth', authRouter);
   app.use('/users', usersRouter);
   app.use('/workspaces', workspacesRouter);
+  app.use('/boards', boardsRouter);
 
   app.use(errorHandler);
 

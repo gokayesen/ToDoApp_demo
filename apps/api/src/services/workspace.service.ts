@@ -26,7 +26,7 @@ export function listWorkspaces(userId: string) {
 // FR7: only the Workspace Owner can invite. An email with an existing account
 // is added as a WorkspaceMember immediately (nothing left "pending"); an email
 // with no account gets a WorkspaceInvite that resolves on registration (see
-// auth.service.register's resolvePendingWorkspaceInvites call).
+// auth.service.register's resolvePendingInvites call).
 export async function inviteMember(
   inviterId: string,
   workspaceId: string,
