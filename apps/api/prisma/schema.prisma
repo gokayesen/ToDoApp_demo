@@ -1,6 +1,6 @@
-// Prisma schema — Epic 1 scope only (auth + workspace/board containers).
-// List/Card/Label/Checklist/Comment/Attachment/ActivityLog/Notification models
-// are added in later epics (3, 4, 6) per Epics-and-Stories.md.
+// Prisma schema — auth/workspace/board containers (Epic 1-2) plus List/Card
+// (Epic 3). Label/Checklist/Comment/Attachment/ActivityLog/Notification models
+// are added in later epics (4, 6) per Epics-and-Stories.md.
 // Cascade behavior follows Architecture.md §4 "Referential Integrity & Cascade Strategy".
 
 generator client {
@@ -127,6 +127,7 @@ model Board {
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members   BoardMember[]
   invites   BoardInvite[]
+  lists     List[]
 }
 
 model BoardMember {
@@ -158,4 +159,39 @@ model BoardInvite {
   invitedBy User  @relation("BoardInviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
 
   @@index([email])
+}
+
+// Story 3.1 (FR14): create/rename/delete. position is a placeholder append-at-end
+// value until Story 3.2 introduces the real neighbor-based fractional-index
+// algorithm (Architecture §4 "Ordering strategy"). isArchived is unused until
+// Story 3.7 but included now to match the full data model in Architecture §4.
+model List {
+  id         String  @id @default(uuid()) @db.Uuid
+  boardId    String  @db.Uuid
+  name       String
+  position   Float
+  isArchived Boolean @default(false)
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([boardId])
+}
+
+// Story 3.1 (FR17): create with title, delete. description/startDate/dueDate
+// are unused until Epic 4 and isArchived until Story 3.8, but all are included
+// now to match the full Card model in Architecture §4.
+model Card {
+  id          String    @id @default(uuid()) @db.Uuid
+  listId      String    @db.Uuid
+  title       String
+  description String?
+  position    Float
+  startDate   DateTime?
+  dueDate     DateTime?
+  isArchived  Boolean   @default(false)
+
+  list List @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
 }

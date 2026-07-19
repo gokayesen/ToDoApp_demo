@@ -1,4 +1,5 @@
 import {
+  createListRequestSchema,
   deleteBoardRequestSchema,
   inviteBoardMemberRequestSchema,
   updateBoardBackgroundRequestSchema,
@@ -15,6 +16,7 @@ import {
   restoreBoardHandler,
   updateBoardBackgroundHandler,
 } from '../controllers/board.controller.js';
+import { createListHandler, listListsHandler } from '../controllers/list.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadBoardContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -52,3 +54,14 @@ boardsRouter.patch(
   validateBody(updateBoardBackgroundRequestSchema),
   updateBoardBackgroundHandler,
 );
+
+// FR14: List creation is board-scoped, same nested-under-parent convention as
+// Board creation under /workspaces/:workspaceId/boards. Viewers can list but
+// not create.
+boardsRouter.post(
+  '/:boardId/lists',
+  requireRole('MEMBER'),
+  validateBody(createListRequestSchema),
+  createListHandler,
+);
+boardsRouter.get('/:boardId/lists', requireRole('VIEWER'), listListsHandler);
