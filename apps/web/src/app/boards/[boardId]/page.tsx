@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getBoard, listLists } from '@/lib/board-api';
 import { recordBoardVisit } from '@/lib/recent-boards';
+import { useBoardRoom } from '@/hooks/use-board-room';
 import { AppShell } from '@/components/shell/app-shell';
 import { BoardLists } from '@/components/board/board-lists';
 
@@ -44,6 +45,11 @@ export default function BoardViewPage() {
   useEffect(() => {
     if (board) recordBoardVisit({ id: board.id, name: board.name, workspaceId: board.workspaceId });
   }, [board]);
+
+  // Story 5.1: join the board's realtime room while this page is open.
+  // Nothing consumes a broadcast yet (Story 5.3) or shows presence (Story
+  // 5.2) — this just establishes membership those stories build on.
+  useBoardRoom(boardId);
 
   if (loading || !user) return null;
 

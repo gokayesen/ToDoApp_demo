@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 // In memory only — never localStorage, to limit XSS exposure (Architecture §7.2).
 // Lost on full page reload by design; AuthProvider restores it via /auth/refresh
