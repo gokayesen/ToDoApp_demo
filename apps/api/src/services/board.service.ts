@@ -3,6 +3,7 @@ import type {
   CreateBoardRequest,
   DeleteBoardRequest,
   InviteBoardMemberRequest,
+  UpdateBoardBackgroundRequest,
   UpdateBoardMemberRoleRequest,
 } from '@todoapp/shared';
 
@@ -19,6 +20,7 @@ import {
   createBoardForWorkspace,
   deleteBoard as deleteBoardRow,
   setBoardArchived,
+  setBoardBackground,
 } from '../repositories/board.repository.js';
 import { createBoardInvite } from '../repositories/board-invite.repository.js';
 import { findUserByEmail } from '../repositories/user.repository.js';
@@ -166,4 +168,9 @@ export async function deleteBoard(board: Board, input: DeleteBoardRequest): Prom
   }
 
   await deleteBoardRow(board.id);
+}
+
+// FR13: same "board settings" role grouping as archive/delete — Admin-only.
+export function updateBoardBackground(board: Board, input: UpdateBoardBackgroundRequest) {
+  return setBoardBackground(board.id, input.background);
 }

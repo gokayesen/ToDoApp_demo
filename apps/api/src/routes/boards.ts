@@ -1,6 +1,7 @@
 import {
   deleteBoardRequestSchema,
   inviteBoardMemberRequestSchema,
+  updateBoardBackgroundRequestSchema,
   updateBoardMemberRoleRequestSchema,
 } from '@todoapp/shared';
 import { Router } from 'express';
@@ -12,6 +13,7 @@ import {
   inviteBoardMemberHandler,
   removeBoardMemberHandler,
   restoreBoardHandler,
+  updateBoardBackgroundHandler,
 } from '../controllers/board.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadBoardContext } from '../middleware/load-resource-context.js';
@@ -43,4 +45,10 @@ boardsRouter.delete(
   requireRole('ADMIN'),
   validateBody(deleteBoardRequestSchema),
   deleteBoardHandler,
+);
+boardsRouter.patch(
+  '/:boardId/background',
+  requireRole('ADMIN'),
+  validateBody(updateBoardBackgroundRequestSchema),
+  updateBoardBackgroundHandler,
 );

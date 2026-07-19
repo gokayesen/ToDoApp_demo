@@ -42,3 +42,8 @@ export const deleteBoardHandler = asyncHandler(async (req: Request, res: Respons
   await boardService.deleteBoard(req.board!, req.body);
   res.status(204).end();
 });
+
+export const updateBoardBackgroundHandler = asyncHandler(async (req: Request, res: Response) => {
+  const board = await boardService.updateBoardBackground(req.board!, req.body);
+  res.json(board);
+});

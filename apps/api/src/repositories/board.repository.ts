@@ -15,3 +15,7 @@ export function setBoardArchived(id: string, isArchived: boolean) {
 export function deleteBoard(id: string) {
   return prisma.board.delete({ where: { id } });
 }
+
+export function setBoardBackground(id: string, background: string | null) {
+  return prisma.board.update({ where: { id }, data: { background } });
+}
