@@ -8,6 +8,11 @@ export const createBoardHandler = asyncHandler(async (req: Request, res: Respons
   res.status(201).json(board);
 });
 
+export const listBoardsHandler = asyncHandler(async (req: Request, res: Response) => {
+  const boards = await boardService.listBoards(req.userId!, req.params.workspaceId!);
+  res.json(boards);
+});
+
 // requireRole('ADMIN') already ran (see routes/boards.ts), so req.board is set.
 export const inviteBoardMemberHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await boardService.inviteBoardMember(req.userId!, req.board!, req.body);

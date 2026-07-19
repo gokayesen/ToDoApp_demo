@@ -5,7 +5,7 @@ import {
 } from '@todoapp/shared';
 import { Router } from 'express';
 
-import { createBoardHandler } from '../controllers/board.controller.js';
+import { createBoardHandler, listBoardsHandler } from '../controllers/board.controller.js';
 import {
   createWorkspaceHandler,
   inviteWorkspaceMemberHandler,
@@ -30,3 +30,4 @@ workspacesRouter.post(
   validateBody(createBoardRequestSchema),
   createBoardHandler,
 );
+workspacesRouter.get('/:workspaceId/boards', listBoardsHandler);

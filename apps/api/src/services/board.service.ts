@@ -19,6 +19,8 @@ import {
 import {
   createBoardForWorkspace,
   deleteBoard as deleteBoardRow,
+  listBoardsForWorkspace,
+  listBoardsForWorkspaceMember,
   setBoardArchived,
   setBoardBackground,
 } from '../repositories/board.repository.js';
@@ -48,6 +50,21 @@ export async function createBoard(userId: string, workspaceId: string, input: Cr
   }
 
   return board;
+}
+
+// FR39: the Dashboard's per-workspace board grid. Same visibility split as
+// createBoard's membership check — Owner sees every non-archived Board,
+// everyone else only the ones they have an explicit BoardMember row on.
+export async function listBoards(userId: string, workspaceId: string) {
+  const workspace = await findWorkspaceById(workspaceId);
+  if (!workspace) throw new HttpError(404, 'Workspace not found');
+
+  const membership = await findWorkspaceMember(workspaceId, userId);
+  if (!membership) throw new HttpError(403, 'You do not have access to this workspace');
+
+  return membership.role === 'OWNER'
+    ? listBoardsForWorkspace(workspaceId)
+    : listBoardsForWorkspaceMember(workspaceId, userId);
 }
 
 // FR9: requireRole('ADMIN') on the route already confirms the inviter is a
