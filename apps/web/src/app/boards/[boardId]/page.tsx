@@ -8,8 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getBoard, listLists } from '@/lib/board-api';
 import { recordBoardVisit } from '@/lib/recent-boards';
 import { AppShell } from '@/components/shell/app-shell';
-import { AddListForm } from '@/components/board/add-list-form';
-import { ListColumn } from '@/components/board/list-column';
+import { BoardLists } from '@/components/board/board-lists';
 
 const FALLBACK_BACKGROUND = 'var(--muted)';
 
@@ -18,8 +17,9 @@ function isImageBackground(value: string) {
 }
 
 // Story 3.3: Board View UI — horizontal-scrolling row of Lists + "+ Add list"
-// (UX §4.2). Card rendering, quick-add, and drag-and-drop are later stories
-// in this epic (3.4-3.6, 3.9).
+// (UX §4.2). Story 3.4 added quick-add cards; Story 3.5 added List
+// drag-and-drop (BoardLists). Card drag-and-drop and face preview arrive with
+// Stories 3.6/3.9.
 export default function BoardViewPage() {
   const router = useRouter();
   const { boardId } = useParams<{ boardId: string }>();
@@ -66,9 +66,8 @@ export default function BoardViewPage() {
           {listsLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
-            lists?.map((list) => <ListColumn key={list.id} list={list} />)
+            <BoardLists boardId={boardId} lists={lists ?? []} />
           )}
-          <AddListForm boardId={boardId} />
         </div>
       </div>
     </AppShell>

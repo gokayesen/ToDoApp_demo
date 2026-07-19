@@ -1,4 +1,11 @@
-import type { Board, Card, CreateCardRequest, CreateListRequest, List } from '@todoapp/shared';
+import type {
+  Board,
+  Card,
+  CreateCardRequest,
+  CreateListRequest,
+  List,
+  MoveListRequest,
+} from '@todoapp/shared';
 
 import { apiFetch } from './api-client';
 
@@ -12,6 +19,13 @@ export function listLists(boardId: string) {
 
 export function createList(boardId: string, input: CreateListRequest) {
   return apiFetch<List>(`/boards/${boardId}/lists`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function moveList(listId: string, input: MoveListRequest) {
+  return apiFetch<List>(`/lists/${listId}/move`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

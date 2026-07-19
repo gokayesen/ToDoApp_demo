@@ -1,8 +1,12 @@
-import { createCardRequestSchema, renameListRequestSchema } from '@todoapp/shared';
+import {
+  createCardRequestSchema,
+  moveListRequestSchema,
+  renameListRequestSchema,
+} from '@todoapp/shared';
 import { Router } from 'express';
 
 import { createCardHandler, listCardsHandler } from '../controllers/card.controller.js';
-import { deleteListHandler, renameListHandler } from '../controllers/list.controller.js';
+import { deleteListHandler, moveListHandler, renameListHandler } from '../controllers/list.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadListContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -21,6 +25,12 @@ listsRouter.patch(
   renameListHandler,
 );
 listsRouter.delete('/:listId', requireRole('MEMBER'), deleteListHandler);
+listsRouter.post(
+  '/:listId/move',
+  requireRole('MEMBER'),
+  validateBody(moveListRequestSchema),
+  moveListHandler,
+);
 
 // FR17: Card creation is list-scoped, same nested-under-parent convention as
 // List creation under /boards/:boardId/lists.
