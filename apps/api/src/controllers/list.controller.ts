@@ -27,3 +27,13 @@ export const moveListHandler = asyncHandler(async (req: Request, res: Response) 
   const list = await listService.moveList(req.list!, req.body);
   res.json(list);
 });
+
+export const archiveListHandler = asyncHandler(async (req: Request, res: Response) => {
+  const list = await listService.archiveList(req.list!);
+  res.json(list);
+});
+
+export const restoreListHandler = asyncHandler(async (req: Request, res: Response) => {
+  const list = await listService.restoreList(req.list!);
+  res.json(list);
+});

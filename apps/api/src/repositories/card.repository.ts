@@ -37,3 +37,23 @@ export function updateCardPosition(id: string, listId: string, position: number,
 export function deleteCard(id: string) {
   return prisma.card.delete({ where: { id } });
 }
+
+// Story 3.7 (FR16) List archive cascade: only touches Cards that are
+// currently active, so a Card a user independently archived beforehand (once
+// Story 3.8 exists) is left alone rather than double-marked.
+export function archiveCardsForListCascade(listId: string, client: Client = prisma) {
+  return client.card.updateMany({
+    where: { listId, isArchived: false },
+    data: { isArchived: true, archivedWithList: true },
+  });
+}
+
+// Inverse of the above: only restores Cards this List's own archive cascade
+// archived, not ones a user independently archived before the List was
+// archived.
+export function restoreCardsForListCascade(listId: string, client: Client = prisma) {
+  return client.card.updateMany({
+    where: { listId, archivedWithList: true },
+    data: { isArchived: false, archivedWithList: false },
+  });
+}

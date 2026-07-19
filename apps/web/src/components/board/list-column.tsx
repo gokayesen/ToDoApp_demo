@@ -2,8 +2,16 @@
 
 import type { Card, List } from '@todoapp/shared';
 import { useSortable } from '@dnd-kit/react/sortable';
+import { MoreHorizontalIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ArchiveListDialog } from './archive-list-dialog';
 import { CardItem } from './card-item';
 import { QuickAddCardForm } from './quick-add-card-form';
 
@@ -19,6 +27,7 @@ import { QuickAddCardForm } from './quick-add-card-form';
 // for an empty list (Story 3.6, FR19) since it has no Card of its own to
 // collide against.
 export function ListColumn({
+  boardId,
   list,
   index,
   cards,
@@ -26,6 +35,7 @@ export function ListColumn({
   otherLists,
   onMoveToList,
 }: {
+  boardId: string;
   list: List;
   index: number;
   cards: Card[];
@@ -35,6 +45,7 @@ export function ListColumn({
 }) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLHeadingElement>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const { isDragging } = useSortable({
     id: list.id,
     index,
@@ -50,13 +61,34 @@ export function ListColumn({
       className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted p-2"
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
-      <h3
-        ref={handleRef}
-        tabIndex={0}
-        className="cursor-grab truncate px-1 py-1 text-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
-      >
-        {list.name}
-      </h3>
+      <div className="flex items-center gap-1">
+        <h3
+          ref={handleRef}
+          tabIndex={0}
+          className="min-w-0 flex-1 cursor-grab truncate px-1 py-1 text-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
+        >
+          {list.name}
+        </h3>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="shrink-0 rounded p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`${list.name} list menu`}
+          >
+            <MoreHorizontalIcon className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setArchiveDialogOpen(true)}>Archive list</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <ArchiveListDialog
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        boardId={boardId}
+        listId={list.id}
+        listName={list.name}
+        cardCount={cards.length}
+      />
       <div className="flex flex-col gap-2">
         {isLoading ? (
           <p className="px-1 text-sm text-muted-foreground">Loading…</p>

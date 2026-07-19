@@ -174,6 +174,7 @@ export function BoardLists({ boardId, lists }: { boardId: string; lists: List[] 
       {orderedLists.map((list, index) => (
         <ListColumn
           key={list.id}
+          boardId={boardId}
           list={list}
           index={index}
           cards={cardsByList[list.id] ?? []}

@@ -32,6 +32,10 @@ export function moveList(listId: string, input: MoveListRequest) {
   });
 }
 
+export function archiveList(listId: string) {
+  return apiFetch<List>(`/lists/${listId}/archive`, { method: 'POST' });
+}
+
 export function listCards(listId: string) {
   return apiFetch<Card[]>(`/lists/${listId}/cards`);
 }

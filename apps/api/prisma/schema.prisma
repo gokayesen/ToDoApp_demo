@@ -181,8 +181,9 @@ model List {
 
 // Story 3.1 (FR17): create with title, delete; position via the same shared
 // engine as List (Story 3.2). description/startDate/dueDate are unused until
-// Epic 4 and isArchived until Story 3.8, but all are included now to match the
-// full Card model in Architecture §4.
+// Epic 4. isArchived gets its first writer in Story 3.7 (List archive cascade)
+// ahead of Story 3.8's own direct per-Card archive/restore, but all are
+// included now to match the full Card model in Architecture §4.
 model Card {
   id          String    @id @default(uuid()) @db.Uuid
   listId      String    @db.Uuid
@@ -192,6 +193,13 @@ model Card {
   startDate   DateTime?
   dueDate     DateTime?
   isArchived  Boolean   @default(false)
+  // Story 3.7 (FR16): set alongside isArchived when a List archive cascades
+  // to this Card, cleared when that cascade is undone by restoring the List.
+  // Distinguishes "archived because its List was archived" from a future
+  // direct per-Card archive (Story 3.8), so restoring a List only brings back
+  // Cards it cascade-archived — one a user independently archived beforehand
+  // stays archived.
+  archivedWithList Boolean @default(false)
 
   list List @relation(fields: [listId], references: [id], onDelete: Cascade)
 

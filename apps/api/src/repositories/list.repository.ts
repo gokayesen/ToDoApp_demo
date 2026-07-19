@@ -41,3 +41,7 @@ export function updateListPosition(id: string, position: number, client: Client 
 export function deleteList(id: string) {
   return prisma.list.delete({ where: { id } });
 }
+
+export function setListArchived(id: string, isArchived: boolean, client: Client = prisma) {
+  return client.list.update({ where: { id }, data: { isArchived } });
+}

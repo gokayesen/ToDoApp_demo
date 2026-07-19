@@ -4,12 +4,17 @@ import type { CreateListRequest, MoveListRequest, RenameListRequest } from '@tod
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
 import {
+  archiveCardsForListCascade,
+  restoreCardsForListCascade,
+} from '../repositories/card.repository.js';
+import {
   createListForBoard,
   deleteList as deleteListRow,
   findLastListPosition,
   findListById,
   listListsForBoard,
   renameList as renameListRow,
+  setListArchived,
   updateListPosition,
 } from '../repositories/list.repository.js';
 import { computePosition } from './position.service.js';
@@ -34,6 +39,28 @@ export function renameList(list: List, input: RenameListRequest) {
 
 export async function deleteList(list: List): Promise<void> {
   await deleteListRow(list.id);
+}
+
+// FR16: requireRole('MEMBER') on the route already excludes Viewers.
+// Idempotent, same rationale as board.service.ts archiveBoard/restoreBoard —
+// re-affirming an already-(non)archived state isn't a meaningful conflict.
+// Cascades to the List's Cards in the same transaction so a client can never
+// observe the List archived with its Cards still active. restoreList only
+// brings back the Cards this cascade archived (card.repository.ts
+// restoreCardsForListCascade) — a Card a user independently archived before
+// the List was archived stays archived.
+export async function archiveList(list: List): Promise<List> {
+  return prisma.$transaction(async (tx) => {
+    await archiveCardsForListCascade(list.id, tx);
+    return setListArchived(list.id, true, tx);
+  });
+}
+
+export async function restoreList(list: List): Promise<List> {
+  return prisma.$transaction(async (tx) => {
+    await restoreCardsForListCascade(list.id, tx);
+    return setListArchived(list.id, false, tx);
+  });
 }
 
 // FR15: reorders happen relative to live neighbors, never a client-submitted

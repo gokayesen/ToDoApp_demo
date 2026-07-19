@@ -6,7 +6,13 @@ import {
 import { Router } from 'express';
 
 import { createCardHandler, listCardsHandler } from '../controllers/card.controller.js';
-import { deleteListHandler, moveListHandler, renameListHandler } from '../controllers/list.controller.js';
+import {
+  archiveListHandler,
+  deleteListHandler,
+  moveListHandler,
+  renameListHandler,
+  restoreListHandler,
+} from '../controllers/list.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadListContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -31,6 +37,11 @@ listsRouter.post(
   validateBody(moveListRequestSchema),
   moveListHandler,
 );
+// FR16 says "Board members can archive a List" verbatim, so MEMBER is the
+// right gate here — unlike Board's own archive/restore (Story 2.7), which
+// PRD §5 scopes to Admin as part of "board settings, archive/delete board".
+listsRouter.post('/:listId/archive', requireRole('MEMBER'), archiveListHandler);
+listsRouter.post('/:listId/restore', requireRole('MEMBER'), restoreListHandler);
 
 // FR17: Card creation is list-scoped, same nested-under-parent convention as
 // List creation under /boards/:boardId/lists.
