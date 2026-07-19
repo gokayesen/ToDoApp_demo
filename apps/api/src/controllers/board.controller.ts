@@ -27,3 +27,13 @@ export const removeBoardMemberHandler = asyncHandler(async (req: Request, res: R
   await boardService.removeBoardMember(req.board!, req.params.userId!);
   res.status(204).end();
 });
+
+export const archiveBoardHandler = asyncHandler(async (req: Request, res: Response) => {
+  const board = await boardService.archiveBoard(req.board!);
+  res.json(board);
+});
+
+export const restoreBoardHandler = asyncHandler(async (req: Request, res: Response) => {
+  const board = await boardService.restoreBoard(req.board!);
+  res.json(board);
+});

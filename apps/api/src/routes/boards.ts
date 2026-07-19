@@ -2,9 +2,11 @@ import { inviteBoardMemberRequestSchema, updateBoardMemberRoleRequestSchema } fr
 import { Router } from 'express';
 
 import {
+  archiveBoardHandler,
   changeBoardMemberRoleHandler,
   inviteBoardMemberHandler,
   removeBoardMemberHandler,
+  restoreBoardHandler,
 } from '../controllers/board.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadBoardContext } from '../middleware/load-resource-context.js';
@@ -29,3 +31,5 @@ boardsRouter.patch(
   changeBoardMemberRoleHandler,
 );
 boardsRouter.delete('/:boardId/members/:userId', requireRole('ADMIN'), removeBoardMemberHandler);
+boardsRouter.post('/:boardId/archive', requireRole('ADMIN'), archiveBoardHandler);
+boardsRouter.post('/:boardId/restore', requireRole('ADMIN'), restoreBoardHandler);

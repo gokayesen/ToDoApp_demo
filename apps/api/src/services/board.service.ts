@@ -14,7 +14,7 @@ import {
   removeBoardMember as removeBoardMemberRow,
   updateBoardMemberRole,
 } from '../repositories/board-member.repository.js';
-import { createBoardForWorkspace } from '../repositories/board.repository.js';
+import { createBoardForWorkspace, setBoardArchived } from '../repositories/board.repository.js';
 import { createBoardInvite } from '../repositories/board-invite.repository.js';
 import { findUserByEmail } from '../repositories/user.repository.js';
 import { findWorkspaceMember } from '../repositories/workspace-member.repository.js';
@@ -137,4 +137,16 @@ export async function removeBoardMember(board: Board, targetUserId: string) {
 
   await removeBoardMemberRow(board.id, targetUserId);
   emitBoardAccessRevoked(board.id, targetUserId);
+}
+
+// FR11: archive/restore is Board-Admin-only, same grouping as archive/delete
+// in PRD §5's role table. Idempotent — archiving an already-archived board (or
+// restoring an already-active one) just re-affirms the state rather than
+// erroring, since there's no meaningful conflict to report.
+export function archiveBoard(board: Board) {
+  return setBoardArchived(board.id, true);
+}
+
+export function restoreBoard(board: Board) {
+  return setBoardArchived(board.id, false);
 }

@@ -7,3 +7,7 @@ export function findBoardById(id: string) {
 export function createBoardForWorkspace(workspaceId: string, name: string) {
   return prisma.board.create({ data: { workspaceId, name } });
 }
+
+export function setBoardArchived(id: string, isArchived: boolean) {
+  return prisma.board.update({ where: { id }, data: { isArchived } });
+}
