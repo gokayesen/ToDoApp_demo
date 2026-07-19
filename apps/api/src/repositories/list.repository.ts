@@ -11,17 +11,15 @@ export function listListsForBoard(boardId: string) {
   });
 }
 
-// Placeholder append-at-end position until Story 3.2's fractional-index engine.
-async function nextListPosition(boardId: string): Promise<number> {
+export async function findLastListPosition(boardId: string): Promise<number | null> {
   const last = await prisma.list.findFirst({
     where: { boardId },
     orderBy: { position: 'desc' },
   });
-  return (last?.position ?? 0) + 1;
+  return last?.position ?? null;
 }
 
-export async function createListForBoard(boardId: string, name: string) {
-  const position = await nextListPosition(boardId);
+export function createListForBoard(boardId: string, name: string, position: number) {
   return prisma.list.create({ data: { boardId, name, position } });
 }
 

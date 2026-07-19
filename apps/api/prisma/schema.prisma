@@ -161,10 +161,11 @@ model BoardInvite {
   @@index([email])
 }
 
-// Story 3.1 (FR14): create/rename/delete. position is a placeholder append-at-end
-// value until Story 3.2 introduces the real neighbor-based fractional-index
-// algorithm (Architecture §4 "Ordering strategy"). isArchived is unused until
-// Story 3.7 but included now to match the full data model in Architecture §4.
+// Story 3.1 (FR14): create/rename/delete. position is written via the shared
+// fractional-index engine (services/position.service.ts, Story 3.2); the
+// reorder endpoint that moves an existing List between live neighbors lands
+// in Story 3.5. isArchived is unused until Story 3.7 but included now to
+// match the full data model in Architecture §4.
 model List {
   id         String  @id @default(uuid()) @db.Uuid
   boardId    String  @db.Uuid
@@ -178,9 +179,10 @@ model List {
   @@index([boardId])
 }
 
-// Story 3.1 (FR17): create with title, delete. description/startDate/dueDate
-// are unused until Epic 4 and isArchived until Story 3.8, but all are included
-// now to match the full Card model in Architecture §4.
+// Story 3.1 (FR17): create with title, delete; position via the same shared
+// engine as List (Story 3.2). description/startDate/dueDate are unused until
+// Epic 4 and isArchived until Story 3.8, but all are included now to match the
+// full Card model in Architecture §4.
 model Card {
   id          String    @id @default(uuid()) @db.Uuid
   listId      String    @db.Uuid
