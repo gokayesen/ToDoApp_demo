@@ -26,6 +26,7 @@ export const cardSchema = z.object({
   startDate: z.coerce.date().nullable(),
   dueDate: z.coerce.date().nullable(),
   isArchived: z.boolean(),
+  archivedWithList: z.boolean(),
 });
 
 export type Card = z.infer<typeof cardSchema>;
