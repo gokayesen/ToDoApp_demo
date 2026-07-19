@@ -1,7 +1,7 @@
 import { createCardRequestSchema, renameListRequestSchema } from '@todoapp/shared';
 import { Router } from 'express';
 
-import { createCardHandler } from '../controllers/card.controller.js';
+import { createCardHandler, listCardsHandler } from '../controllers/card.controller.js';
 import { deleteListHandler, renameListHandler } from '../controllers/list.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadListContext } from '../middleware/load-resource-context.js';
@@ -30,3 +30,4 @@ listsRouter.post(
   validateBody(createCardRequestSchema),
   createCardHandler,
 );
+listsRouter.get('/:listId/cards', requireRole('VIEWER'), listCardsHandler);

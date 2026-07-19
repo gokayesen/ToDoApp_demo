@@ -8,6 +8,11 @@ export const createCardHandler = asyncHandler(async (req: Request, res: Response
   res.status(201).json(card);
 });
 
+export const listCardsHandler = asyncHandler(async (req: Request, res: Response) => {
+  const cards = await cardService.listCards(req.list!);
+  res.json(cards);
+});
+
 export const deleteCardHandler = asyncHandler(async (req: Request, res: Response) => {
   await cardService.deleteCard(req.card!);
   res.status(204).end();
