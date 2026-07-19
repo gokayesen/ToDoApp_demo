@@ -11,3 +11,7 @@ export function createBoardForWorkspace(workspaceId: string, name: string) {
 export function setBoardArchived(id: string, isArchived: boolean) {
   return prisma.board.update({ where: { id }, data: { isArchived } });
 }
+
+export function deleteBoard(id: string) {
+  return prisma.board.delete({ where: { id } });
+}

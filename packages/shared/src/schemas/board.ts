@@ -30,3 +30,11 @@ export const updateBoardMemberRoleRequestSchema = z.object({
 });
 
 export type UpdateBoardMemberRoleRequest = z.infer<typeof updateBoardMemberRoleRequestSchema>;
+
+// FR12's "confirmation step": the caller must echo the board's current name
+// back, the same type-to-confirm pattern used for other irreversible deletes.
+export const deleteBoardRequestSchema = z.object({
+  confirmName: z.string().min(1),
+});
+
+export type DeleteBoardRequest = z.infer<typeof deleteBoardRequestSchema>;

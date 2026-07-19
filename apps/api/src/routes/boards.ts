@@ -1,9 +1,14 @@
-import { inviteBoardMemberRequestSchema, updateBoardMemberRoleRequestSchema } from '@todoapp/shared';
+import {
+  deleteBoardRequestSchema,
+  inviteBoardMemberRequestSchema,
+  updateBoardMemberRoleRequestSchema,
+} from '@todoapp/shared';
 import { Router } from 'express';
 
 import {
   archiveBoardHandler,
   changeBoardMemberRoleHandler,
+  deleteBoardHandler,
   inviteBoardMemberHandler,
   removeBoardMemberHandler,
   restoreBoardHandler,
@@ -33,3 +38,9 @@ boardsRouter.patch(
 boardsRouter.delete('/:boardId/members/:userId', requireRole('ADMIN'), removeBoardMemberHandler);
 boardsRouter.post('/:boardId/archive', requireRole('ADMIN'), archiveBoardHandler);
 boardsRouter.post('/:boardId/restore', requireRole('ADMIN'), restoreBoardHandler);
+boardsRouter.delete(
+  '/:boardId',
+  requireRole('ADMIN'),
+  validateBody(deleteBoardRequestSchema),
+  deleteBoardHandler,
+);

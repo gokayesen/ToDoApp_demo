@@ -37,3 +37,8 @@ export const restoreBoardHandler = asyncHandler(async (req: Request, res: Respon
   const board = await boardService.restoreBoard(req.board!);
   res.json(board);
 });
+
+export const deleteBoardHandler = asyncHandler(async (req: Request, res: Response) => {
+  await boardService.deleteBoard(req.board!, req.body);
+  res.status(204).end();
+});

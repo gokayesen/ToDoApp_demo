@@ -1,6 +1,7 @@
 import type { Board } from '@prisma/client';
 import type {
   CreateBoardRequest,
+  DeleteBoardRequest,
   InviteBoardMemberRequest,
   UpdateBoardMemberRoleRequest,
 } from '@todoapp/shared';
@@ -14,7 +15,11 @@ import {
   removeBoardMember as removeBoardMemberRow,
   updateBoardMemberRole,
 } from '../repositories/board-member.repository.js';
-import { createBoardForWorkspace, setBoardArchived } from '../repositories/board.repository.js';
+import {
+  createBoardForWorkspace,
+  deleteBoard as deleteBoardRow,
+  setBoardArchived,
+} from '../repositories/board.repository.js';
 import { createBoardInvite } from '../repositories/board-invite.repository.js';
 import { findUserByEmail } from '../repositories/user.repository.js';
 import { findWorkspaceMember } from '../repositories/workspace-member.repository.js';
@@ -149,4 +154,16 @@ export function archiveBoard(board: Board) {
 
 export function restoreBoard(board: Board) {
   return setBoardArchived(board.id, false);
+}
+
+// FR12: Owner/Admin only (requireRole('ADMIN') on the route). The confirmation
+// step is a type-to-confirm check against the board's current name — cheap to
+// verify server-side and doesn't depend on any particular client UI existing
+// yet to be a real safeguard against an accidental irreversible delete.
+export async function deleteBoard(board: Board, input: DeleteBoardRequest): Promise<void> {
+  if (input.confirmName !== board.name) {
+    throw new HttpError(400, 'Confirmation text does not match the board name');
+  }
+
+  await deleteBoardRow(board.id);
 }
