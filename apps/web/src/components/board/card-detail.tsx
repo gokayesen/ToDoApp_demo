@@ -7,6 +7,7 @@ import { XIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Markdown from 'react-markdown';
 
+import { ApiError } from '@/lib/api-client';
 import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
 import { AvatarStack, PersonAvatar } from '@/components/ui/person-avatar';
@@ -120,13 +121,25 @@ export function CardDetail({
   // still-focused node triggers a native blur) must not also save — this
   // flag lets onBlur tell that case apart from an intentional blur-to-save.
   const cancelledRef = useRef(false);
+  // Story 5.6 (FR33): the Card.updatedAt this edit session started from,
+  // captured once at startEditingTitle/Description rather than read fresh at
+  // save time — saveTitle/saveDescription are redefined every render and
+  // would otherwise pick up whatever `card.updatedAt` a live update landed
+  // with mid-edit, silently defeating the conflict check it's there to run.
+  const expectedUpdatedAtRef = useRef<Date | null>(null);
+  const [conflictNotice, setConflictNotice] = useState<string | null>(null);
+  const conflictTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // A newly-opened Card starts in read (rendered) mode, not mid-edit from
   // whichever Card was open before it.
   useEffect(() => {
     setEditingTitle(false);
     setEditingDescription(false);
+    setConflictNotice(null);
+    clearTimeout(conflictTimerRef.current);
   }, [card?.id]);
+
+  useEffect(() => () => clearTimeout(conflictTimerRef.current), []);
 
   const cardId = card?.id ?? null;
   useCardRoom(cardId);
@@ -160,6 +173,7 @@ export function CardDetail({
       description?: string | null;
       startDate?: Date | null;
       dueDate?: Date | null;
+      expectedUpdatedAt?: Date;
     }) => {
       if (!card) throw new Error('No card open');
       return updateCard(card.id, input);
@@ -173,12 +187,25 @@ export function CardDetail({
         old?.map((c) => (c.id === updated.id ? updated : c)),
       );
     },
+    // FR33 (Story 5.6): the server already told us who won and the winning
+    // value already reached this client's cache via the live card:updated
+    // broadcast (Story 5.4/5.5) — this just surfaces the conflict inline and
+    // drops back to read mode instead of leaving a now-orphaned edit open.
+    onError: (error) => {
+      if (!(error instanceof ApiError) || error.status !== 409) return;
+      setEditingTitle(false);
+      setEditingDescription(false);
+      setConflictNotice(error.message);
+      clearTimeout(conflictTimerRef.current);
+      conflictTimerRef.current = setTimeout(() => setConflictNotice(null), 6000);
+    },
   });
 
   function startEditingTitle() {
     if (!card) return;
     cancelledRef.current = false;
     setTitleDraft(card.title);
+    expectedUpdatedAtRef.current = card.updatedAt;
     setEditingTitle(true);
   }
 
@@ -186,6 +213,7 @@ export function CardDetail({
     if (!card) return;
     cancelledRef.current = false;
     setDescriptionDraft(card.description ?? '');
+    expectedUpdatedAtRef.current = card.updatedAt;
     setEditingDescription(true);
   }
 
@@ -197,7 +225,7 @@ export function CardDetail({
     const value = titleDraft.trim();
     setEditingTitle(false);
     if (!card || !value || value === card.title) return;
-    mutation.mutate({ title: value });
+    mutation.mutate({ title: value, expectedUpdatedAt: expectedUpdatedAtRef.current ?? undefined });
   }
 
   function saveDescription() {
@@ -208,7 +236,10 @@ export function CardDetail({
     const value = descriptionDraft.trim();
     setEditingDescription(false);
     if (!card || value === (card.description ?? '')) return;
-    mutation.mutate({ description: value || null });
+    mutation.mutate({
+      description: value || null,
+      expectedUpdatedAt: expectedUpdatedAtRef.current ?? undefined,
+    });
   }
 
   function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -282,6 +313,17 @@ export function CardDetail({
                       {card.title}
                     </h2>
                   )}
+                  {/* FR33/Story 5.6 (UX §6): "This was just updated by X — your
+                      view has been refreshed" — the losing side of a
+                      concurrent edit. The refreshed value is already visible
+                      above via the live card:updated merge (Story 5.4/5.5);
+                      this notice just explains why the in-progress edit
+                      vanished. */}
+                  {conflictNotice && (
+                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                      {conflictNotice}
+                    </p>
+                  )}
                   {/* UX §6 "Ayşe is also viewing this card" — card-level presence,
                       distinct from the board header's avatar stack (usePresence). */}
                   {otherViewers.length > 0 && (
@@ -333,6 +375,7 @@ export function CardDetail({
                       onChange={(e) =>
                         mutation.mutate({
                           startDate: e.target.value ? new Date(e.target.value) : null,
+                          expectedUpdatedAt: card.updatedAt,
                         })
                       }
                       className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -346,6 +389,7 @@ export function CardDetail({
                       onChange={(e) =>
                         mutation.mutate({
                           dueDate: e.target.value ? new Date(e.target.value) : null,
+                          expectedUpdatedAt: card.updatedAt,
                         })
                       }
                       className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"

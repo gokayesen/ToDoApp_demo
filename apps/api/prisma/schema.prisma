@@ -206,6 +206,13 @@ model Card {
   // Cards it cascade-archived — one a user independently archived beforehand
   // stays archived.
   archivedWithList Boolean   @default(false)
+  // Story 5.6 (FR33): optimistic-concurrency check for the "just updated by
+  // X" conflict signal (UX §6) — bumped on every scalar-field update to this
+  // row (title/description/dates/position/isArchived), not on join-table
+  // changes (labels/assignees/checklists) which don't touch the Card row
+  // itself. Not in Architecture §4's ER diagram, which never modeled
+  // conflict detection — same kind of gap-fill as archivedWithList above.
+  updatedAt        DateTime  @updatedAt
 
   list        List           @relation(fields: [listId], references: [id], onDelete: Cascade)
   labels      CardLabel[]

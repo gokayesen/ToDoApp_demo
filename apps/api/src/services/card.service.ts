@@ -27,7 +27,12 @@ import {
 import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
 import { findUserById } from '../repositories/user.repository.js';
-import { emitCardCreated, emitCardDeleted, emitCardMoved, emitCardUpdated } from '../sockets/broadcast.js';
+import {
+  emitCardCreated,
+  emitCardDeleted,
+  emitCardMoved,
+  emitCardUpdated,
+} from '../sockets/broadcast.js';
 import { logActivity } from './activity-log.service.js';
 import { computePosition } from './position.service.js';
 
@@ -52,13 +57,31 @@ export function listCards(list: List) {
 // FR18: inline-editable title/description (Story 4.2). requireRole('MEMBER')
 // on the route already excludes Viewers, same gate as every other Card
 // mutation above.
+//
+// FR33 (Story 5.6, UX §6): optimistic-concurrency check — `card` here is the
+// row loadCardContext just loaded for this request, so if the caller's
+// expectedUpdatedAt (captured when it started this edit session) doesn't
+// match it, someone else's write landed in between. Reject rather than
+// silently overwrite; the loser's client already has the winner's change via
+// the live card:updated broadcast (Story 5.4) by the time this 409 arrives,
+// so "your view has been refreshed" in the message is already true.
 export async function updateCard(
   card: Card,
   boardId: string,
   actorId: string,
   input: UpdateCardRequest,
 ): Promise<Card> {
-  await updateCardFields(card.id, input);
+  const { expectedUpdatedAt, ...fields } = input;
+  if (expectedUpdatedAt && expectedUpdatedAt.getTime() !== card.updatedAt.getTime()) {
+    const fresh = await findCardById(card.id);
+    const lastEditor = fresh?.activityLog.at(-1)?.actorNameSnapshot ?? 'someone else';
+    throw new HttpError(
+      409,
+      `This card was just updated by ${lastEditor} — your view has been refreshed.`,
+    );
+  }
+
+  await updateCardFields(card.id, fields);
 
   // FR30: one entry per field that actually changed, not one generic "card
   // updated" entry — an actionable Activity feed names what happened.
@@ -72,7 +95,13 @@ export async function updateCard(
     });
   }
   if (input.description !== undefined && input.description !== card.description) {
-    await logActivity({ boardId, cardId: card.id, actorId, type: 'card.description_updated', metadata: {} });
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'card.description_updated',
+      metadata: {},
+    });
   }
   if (dateChanged(card.startDate, input.startDate)) {
     await logActivity({
@@ -80,7 +109,10 @@ export async function updateCard(
       cardId: card.id,
       actorId,
       type: 'card.start_date_changed',
-      metadata: { from: card.startDate?.toISOString() ?? null, to: input.startDate?.toISOString() ?? null },
+      metadata: {
+        from: card.startDate?.toISOString() ?? null,
+        to: input.startDate?.toISOString() ?? null,
+      },
     });
   }
   if (dateChanged(card.dueDate, input.dueDate)) {
@@ -89,7 +121,10 @@ export async function updateCard(
       cardId: card.id,
       actorId,
       type: 'card.due_date_changed',
-      metadata: { from: card.dueDate?.toISOString() ?? null, to: input.dueDate?.toISOString() ?? null },
+      metadata: {
+        from: card.dueDate?.toISOString() ?? null,
+        to: input.dueDate?.toISOString() ?? null,
+      },
     });
   }
 
@@ -195,7 +230,12 @@ export async function moveCard(
 // gate as every other Card mutation above, distinct from the Label
 // taxonomy's own ADMIN-gated CRUD (label.service.ts). Cross-board attach is
 // rejected the same way moveCard rejects a cross-board target List.
-export async function attachLabel(card: Card, boardId: string, actorId: string, input: AttachCardLabelRequest) {
+export async function attachLabel(
+  card: Card,
+  boardId: string,
+  actorId: string,
+  input: AttachCardLabelRequest,
+) {
   const label = await findLabelById(input.labelId);
   if (!label || label.boardId !== boardId) {
     throw new HttpError(400, 'labelId must reference a Label on the same board');
@@ -238,7 +278,12 @@ export async function detachLabel(card: Card, boardId: string, actorId: string, 
 // gate as every other Card mutation above. The assignee must be an explicit
 // Board Member (see board-member.repository.ts listBoardMembers comment on
 // why the Workspace Owner's implicit access doesn't count here either).
-export async function assignUser(card: Card, boardId: string, actorId: string, input: AssignCardRequest) {
+export async function assignUser(
+  card: Card,
+  boardId: string,
+  actorId: string,
+  input: AssignCardRequest,
+) {
   const membership = await findBoardMember(boardId, input.userId);
   if (!membership) throw new HttpError(400, 'userId must reference a member of this board');
 
