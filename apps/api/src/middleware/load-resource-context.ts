@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import { asyncHandler } from '../lib/async-handler.js';
+import { findAttachmentById } from '../repositories/attachment.repository.js';
 import { findBoardById } from '../repositories/board.repository.js';
 import { findCardById } from '../repositories/card.repository.js';
 import { findChecklistItemById } from '../repositories/checklist-item.repository.js';
@@ -227,6 +228,49 @@ export const loadCommentContext = asyncHandler(
     }
 
     req.comment = comment;
+    req.card = card;
+    req.list = list;
+    req.board = board;
+    req.boardRole = role;
+    next();
+  },
+);
+
+// Attachment routes carry an :attachmentId param — context resolves through
+// its owning Card up to Board, same one-level-deeper idea as loadCardContext.
+export const loadAttachmentContext = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const attachment = await findAttachmentById(req.params.attachmentId!);
+    if (!attachment) {
+      res.status(404).json({ error: 'Attachment not found' });
+      return;
+    }
+
+    const card = await findCardById(attachment.cardId);
+    if (!card) {
+      res.status(404).json({ error: 'Card not found' });
+      return;
+    }
+
+    const list = await findListById(card.listId);
+    if (!list) {
+      res.status(404).json({ error: 'List not found' });
+      return;
+    }
+
+    const board = await findBoardById(list.boardId);
+    if (!board) {
+      res.status(404).json({ error: 'Board not found' });
+      return;
+    }
+
+    const role = await resolveBoardRole(board, req.userId!);
+    if (!role) {
+      res.status(403).json({ error: 'You do not have access to this board' });
+      return;
+    }
+
+    req.attachment = attachment;
     req.card = card;
     req.list = list;
     req.board = board;

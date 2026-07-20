@@ -13,6 +13,7 @@ import { PersonAvatar } from '@/components/ui/person-avatar';
 import { getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
 import { AssigneePicker } from './assignee-picker';
+import { AttachmentSection } from './attachment-section';
 import { ChecklistSection } from './checklist-section';
 import { CommentSection } from './comment-section';
 import { LabelChip } from './label-badge';
@@ -309,6 +310,13 @@ export function CardDetail({
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-medium text-muted-foreground">Checklists</span>
                   <ChecklistSection card={card} listId={list.id} />
+                </div>
+              )}
+
+              {list && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Attachments</span>
+                  <AttachmentSection card={card} listId={list.id} />
                 </div>
               )}
 

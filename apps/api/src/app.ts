@@ -4,6 +4,7 @@ import express from 'express';
 
 import { errorHandler } from './middleware/error-handler.js';
 import { passport } from './lib/passport.js';
+import { attachmentsRouter } from './routes/attachments.js';
 import { authRouter } from './routes/auth.js';
 import { boardsRouter } from './routes/boards.js';
 import { cardsRouter } from './routes/cards.js';
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/checklists', checklistsRouter);
   app.use('/checklist-items', checklistItemsRouter);
   app.use('/comments', commentsRouter);
+  app.use('/attachments', attachmentsRouter);
 
   app.use(errorHandler);
 

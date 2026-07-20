@@ -41,6 +41,7 @@ model User {
   sentBoardInvites     BoardInvite[]         @relation("BoardInviteSender")
   cardAssignments      CardAssignee[]
   comments             Comment[]
+  attachments          Attachment[]
 }
 
 model OAuthAccount {
@@ -204,11 +205,12 @@ model Card {
   // stays archived.
   archivedWithList Boolean @default(false)
 
-  list       List           @relation(fields: [listId], references: [id], onDelete: Cascade)
-  labels     CardLabel[]
-  assignees  CardAssignee[]
-  checklists Checklist[]
-  comments   Comment[]
+  list        List           @relation(fields: [listId], references: [id], onDelete: Cascade)
+  labels      CardLabel[]
+  assignees   CardAssignee[]
+  checklists  Checklist[]
+  comments    Comment[]
+  attachments Attachment[]
 
   @@index([listId])
 }
@@ -262,6 +264,32 @@ model Comment {
 
   card Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([cardId])
+}
+
+// Story 4.8 (FR29): direct-to-R2 presigned upload (Architecture §3/§9) — the
+// API never proxies file bytes, only issues a presigned PUT URL and then
+// records the resulting object's public URL here once the client's direct
+// upload succeeds. uploaderId/uploaderNameSnapshot follow the same SetNull +
+// denormalized-snapshot pattern as Comment.userId/authorNameSnapshot
+// (Architecture §4 cascade table). createdAt isn't in the Architecture §4 ER
+// diagram's Attachment block (unlike Comment/ActivityLog, which both have
+// one) but chronological attachment ordering needs it — same kind of small,
+// safe gap-fill as Story 3.9's archivedWithList fix.
+model Attachment {
+  id                   String   @id @default(uuid()) @db.Uuid
+  cardId               String   @db.Uuid
+  uploaderId           String?  @db.Uuid
+  uploaderNameSnapshot String
+  fileUrl              String
+  fileName             String
+  fileSize             Int
+  mimeType             String
+  createdAt            DateTime @default(now())
+
+  card     Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  uploader User? @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
   @@index([cardId])
 }

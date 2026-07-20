@@ -3,7 +3,15 @@
 import type { Card, List } from '@todoapp/shared';
 import { SortableKeyboardPlugin } from '@dnd-kit/dom/sortable';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { AlertTriangleIcon, CalendarIcon, ClockIcon, ListChecksIcon, MessageSquareIcon, MoveIcon } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  CalendarIcon,
+  ClockIcon,
+  ListChecksIcon,
+  MessageSquareIcon,
+  MoveIcon,
+  PaperclipIcon,
+} from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -113,10 +121,9 @@ export function CardItem({
           </div>
         )}
       </div>
-      {/* FR23/FR27/FR28 card face preview, UX §4.2 order (labels, due date,
-          assignees, checklist progress, comment count): attachments still
-          have no data model (Story 4.8), so left off rather than rendered
-          empty. */}
+      {/* FR23/FR27/FR28/FR29 card face preview, UX §4.2 order (labels, due
+          date, assignees, checklist progress, comment count, attachment
+          count). */}
       {card.labels.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {card.labels.map((label) => (
@@ -142,7 +149,8 @@ export function CardItem({
       {(() => {
         const totalItems = card.checklists.reduce((sum, checklist) => sum + checklist.items.length, 0);
         const commentCount = card.comments.length;
-        if (totalItems === 0 && commentCount === 0) return null;
+        const attachmentCount = card.attachments.length;
+        if (totalItems === 0 && commentCount === 0 && attachmentCount === 0) return null;
         const checkedItems = card.checklists.reduce(
           (sum, checklist) => sum + checklist.items.filter((item) => item.isChecked).length,
           0,
@@ -164,6 +172,12 @@ export function CardItem({
               <div className="flex items-center gap-1 rounded px-1 text-xs text-muted-foreground">
                 <MessageSquareIcon className="size-3" />
                 {commentCount}
+              </div>
+            )}
+            {attachmentCount > 0 && (
+              <div className="flex items-center gap-1 rounded px-1 text-xs text-muted-foreground">
+                <PaperclipIcon className="size-3" />
+                {attachmentCount}
               </div>
             )}
           </div>

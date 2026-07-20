@@ -1,13 +1,19 @@
 import {
   assignCardRequestSchema,
   attachCardLabelRequestSchema,
+  createAttachmentRequestSchema,
   createChecklistRequestSchema,
   createCommentRequestSchema,
   moveCardRequestSchema,
+  presignAttachmentRequestSchema,
   updateCardRequestSchema,
 } from '@todoapp/shared';
 import { Router } from 'express';
 
+import {
+  createAttachmentHandler,
+  presignAttachmentHandler,
+} from '../controllers/attachment.controller.js';
 import {
   archiveCardHandler,
   assignUserHandler,
@@ -90,4 +96,23 @@ cardsRouter.post(
   requireRole('MEMBER'),
   validateBody(createCommentRequestSchema),
   createCommentHandler,
+);
+
+// FR29: direct-to-R2 upload flow (Architecture §3/§9) — presign issues a
+// short-lived PUT URL for the client to upload straight to R2, then a second
+// call records the resulting object as an Attachment once that upload
+// succeeds. Deletion lives under /attachments instead (routes/attachments.ts)
+// since it needs the extra uploader-or-admin check, same split comments.ts
+// uses.
+cardsRouter.post(
+  '/:cardId/attachments/presign',
+  requireRole('MEMBER'),
+  validateBody(presignAttachmentRequestSchema),
+  presignAttachmentHandler,
+);
+cardsRouter.post(
+  '/:cardId/attachments',
+  requireRole('MEMBER'),
+  validateBody(createAttachmentRequestSchema),
+  createAttachmentHandler,
 );

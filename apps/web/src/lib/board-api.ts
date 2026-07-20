@@ -4,6 +4,7 @@ import type {
   Board,
   BoardMember,
   Card,
+  CreateAttachmentRequest,
   CreateCardRequest,
   CreateChecklistItemRequest,
   CreateChecklistRequest,
@@ -15,6 +16,8 @@ import type {
   MoveCardRequest,
   MoveChecklistItemRequest,
   MoveListRequest,
+  PresignAttachmentRequest,
+  PresignAttachmentResponse,
   UpdateCardRequest,
   UpdateChecklistItemRequest,
   UpdateLabelRequest,
@@ -166,4 +169,22 @@ export function createComment(cardId: string, input: CreateCommentRequest) {
 
 export function deleteComment(commentId: string) {
   return apiFetch<Card>(`/comments/${commentId}`, { method: 'DELETE' });
+}
+
+export function presignAttachment(cardId: string, input: PresignAttachmentRequest) {
+  return apiFetch<PresignAttachmentResponse>(`/cards/${cardId}/attachments/presign`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function createAttachment(cardId: string, input: CreateAttachmentRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/attachments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAttachment(attachmentId: string) {
+  return apiFetch<Card>(`/attachments/${attachmentId}`, { method: 'DELETE' });
 }
