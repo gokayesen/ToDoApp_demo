@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { asyncHandler } from '../lib/async-handler.js';
 import { findBoardById } from '../repositories/board.repository.js';
 import { findCardById } from '../repositories/card.repository.js';
+import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
 import { resolveBoardRole } from '../services/board-role.service.js';
 
@@ -90,6 +91,35 @@ export const loadCardContext = asyncHandler(
 
     req.card = card;
     req.list = list;
+    req.board = board;
+    req.boardRole = role;
+    next();
+  },
+);
+
+// Label routes carry a :labelId param — context resolves straight to the
+// owning Board (Label has no intermediate parent, unlike Card/List).
+export const loadLabelContext = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const label = await findLabelById(req.params.labelId!);
+    if (!label) {
+      res.status(404).json({ error: 'Label not found' });
+      return;
+    }
+
+    const board = await findBoardById(label.boardId);
+    if (!board) {
+      res.status(404).json({ error: 'Board not found' });
+      return;
+    }
+
+    const role = await resolveBoardRole(board, req.userId!);
+    if (!role) {
+      res.status(403).json({ error: 'You do not have access to this board' });
+      return;
+    }
+
+    req.label = label;
     req.board = board;
     req.boardRole = role;
     next();

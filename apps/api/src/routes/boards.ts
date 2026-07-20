@@ -1,4 +1,5 @@
 import {
+  createLabelRequestSchema,
   createListRequestSchema,
   deleteBoardRequestSchema,
   inviteBoardMemberRequestSchema,
@@ -17,6 +18,7 @@ import {
   restoreBoardHandler,
   updateBoardBackgroundHandler,
 } from '../controllers/board.controller.js';
+import { createLabelHandler, listLabelsHandler } from '../controllers/label.controller.js';
 import { createListHandler, listListsHandler } from '../controllers/list.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadBoardContext } from '../middleware/load-resource-context.js';
@@ -67,3 +69,15 @@ boardsRouter.post(
   createListHandler,
 );
 boardsRouter.get('/:boardId/lists', requireRole('VIEWER'), listListsHandler);
+
+// FR24: Label taxonomy is board-scoped, same nested-under-parent convention
+// as List/Board creation above. Listing is VIEWER (read-only board content);
+// creation is ADMIN, same gate as this Board's other settings-level actions
+// (background, member roles) — see label.service.ts.
+boardsRouter.get('/:boardId/labels', requireRole('VIEWER'), listLabelsHandler);
+boardsRouter.post(
+  '/:boardId/labels',
+  requireRole('ADMIN'),
+  validateBody(createLabelRequestSchema),
+  createLabelHandler,
+);

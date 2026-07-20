@@ -241,6 +241,7 @@ export function BoardLists({
       <CardDetail
         card={openCard}
         list={openCardList}
+        boardId={boardId}
         boardName={boardName}
         open={openCardId !== null}
         onOpenChange={(next) => {

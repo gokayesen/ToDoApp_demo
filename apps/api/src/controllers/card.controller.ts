@@ -28,6 +28,16 @@ export const moveCardHandler = asyncHandler(async (req: Request, res: Response) 
   res.json(card);
 });
 
+export const attachLabelHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.attachLabel(req.card!, req.board!.id, req.body);
+  res.json(card);
+});
+
+export const detachLabelHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.detachLabel(req.card!, req.board!.id, req.params.labelId!);
+  res.json(card);
+});
+
 export const archiveCardHandler = asyncHandler(async (req: Request, res: Response) => {
   const card = await cardService.archiveCard(req.card!, req.board!.id);
   res.json(card);

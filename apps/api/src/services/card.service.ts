@@ -1,11 +1,13 @@
 import type { Card, List } from '@prisma/client';
-import type { CreateCardRequest, MoveCardRequest, UpdateCardRequest } from '@todoapp/shared';
+import type { AttachCardLabelRequest, CreateCardRequest, MoveCardRequest, UpdateCardRequest } from '@todoapp/shared';
 
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
 import {
+  attachLabelToCard,
   createCardForList,
   deleteCard as deleteCardRow,
+  detachLabelFromCard,
   findCardById,
   findLastCardPosition,
   listCardsForList,
@@ -13,6 +15,7 @@ import {
   updateCardFields,
   updateCardPosition,
 } from '../repositories/card.repository.js';
+import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
 import { emitCardCreated, emitCardDeleted, emitCardMoved, emitCardUpdated } from '../sockets/broadcast.js';
 import { computePosition } from './position.service.js';
@@ -103,5 +106,26 @@ export async function moveCard(
     return updateCardPosition(card.id, listId, position, tx);
   });
   emitCardMoved(currentList.boardId, updated, actorId);
+  return updated;
+}
+
+// FR24: requireRole('MEMBER') on the route already excludes Viewers — same
+// gate as every other Card mutation above, distinct from the Label
+// taxonomy's own ADMIN-gated CRUD (label.service.ts). Cross-board attach is
+// rejected the same way moveCard rejects a cross-board target List.
+export async function attachLabel(card: Card, boardId: string, input: AttachCardLabelRequest) {
+  const label = await findLabelById(input.labelId);
+  if (!label || label.boardId !== boardId) {
+    throw new HttpError(400, 'labelId must reference a Label on the same board');
+  }
+
+  const updated = await attachLabelToCard(card.id, label.id);
+  emitCardUpdated(boardId, updated!);
+  return updated;
+}
+
+export async function detachLabel(card: Card, boardId: string, labelId: string) {
+  const updated = await detachLabelFromCard(card.id, labelId);
+  emitCardUpdated(boardId, updated!);
   return updated;
 }

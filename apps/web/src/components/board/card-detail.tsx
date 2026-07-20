@@ -10,11 +10,14 @@ import Markdown from 'react-markdown';
 import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { LabelChip } from './label-badge';
+import { LabelPicker } from './label-picker';
 
 // Story 4.1 (UX §4.3): the Card Detail shell — title + List/Board breadcrumb
-// + close button. Story 4.2 (FR18) adds inline-editable title/description
-// within that shell. Labels, dates, assignees, checklists, attachments, and
-// the comment/activity feed are separate later Epic 4 stories.
+// + close button. Story 4.2 (FR18) adds inline-editable title/description;
+// Story 4.3 (FR24) adds the Labels row of the metadata section. Dates,
+// assignees, checklists, attachments, and the comment/activity feed are
+// separate later Epic 4 stories.
 //
 // UX §7: full-screen sheet by default (mobile), centered modal from `sm:` up
 // (desktop) — one Popup with responsive classes rather than two components,
@@ -22,12 +25,14 @@ import { cn } from '@/lib/utils';
 export function CardDetail({
   card,
   list,
+  boardId,
   boardName,
   open,
   onOpenChange,
 }: {
   card: Card | null;
   list: List | null;
+  boardId: string;
   boardName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -179,6 +184,18 @@ export function CardDetail({
                   <XIcon />
                 </DialogPrimitive.Close>
               </div>
+
+              {list && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Labels</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {card.labels.map((label) => (
+                      <LabelChip key={label.id} label={label} />
+                    ))}
+                    <LabelPicker card={card} boardId={boardId} listId={list.id} />
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Description</span>

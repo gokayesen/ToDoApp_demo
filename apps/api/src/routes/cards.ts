@@ -1,9 +1,11 @@
-import { moveCardRequestSchema, updateCardRequestSchema } from '@todoapp/shared';
+import { attachCardLabelRequestSchema, moveCardRequestSchema, updateCardRequestSchema } from '@todoapp/shared';
 import { Router } from 'express';
 
 import {
   archiveCardHandler,
+  attachLabelHandler,
   deleteCardHandler,
+  detachLabelHandler,
   moveCardHandler,
   restoreCardHandler,
   updateCardHandler,
@@ -35,3 +37,14 @@ cardsRouter.post(
 // every other Card mutation above.
 cardsRouter.post('/:cardId/archive', requireRole('MEMBER'), archiveCardHandler);
 cardsRouter.post('/:cardId/restore', requireRole('MEMBER'), restoreCardHandler);
+
+// FR24: attach/remove a Label on a Card. MEMBER-gated like every other Card
+// mutation above — distinct from the Label taxonomy's own ADMIN-gated CRUD
+// mounted under /boards/:boardId/labels and /labels/:labelId.
+cardsRouter.post(
+  '/:cardId/labels',
+  requireRole('MEMBER'),
+  validateBody(attachCardLabelRequestSchema),
+  attachLabelHandler,
+);
+cardsRouter.delete('/:cardId/labels/:labelId', requireRole('MEMBER'), detachLabelHandler);

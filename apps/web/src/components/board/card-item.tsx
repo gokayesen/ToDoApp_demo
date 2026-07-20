@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { LabelDot } from './label-badge';
 
 const dueDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 
@@ -100,10 +101,17 @@ export function CardItem({
           </div>
         )}
       </div>
-      {/* FR23 card face preview: due date is the only piece of this preview
-          with real backing data right now (Card.dueDate, Story 3.1's schema)
-          — labels/assignees/checklists/comments/attachments have no data
-          model yet (Epic 4), so they're left off rather than rendered empty. */}
+      {/* FR23 card face preview, UX §4.2 order (labels, then due date):
+          assignees/checklists/comments/attachments still have no data model
+          (later Epic 4 stories), so they're left off rather than rendered
+          empty. */}
+      {card.labels.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {card.labels.map((label) => (
+            <LabelDot key={label.id} label={label} />
+          ))}
+        </div>
+      )}
       {card.dueDate && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <ClockIcon className="size-3" />

@@ -128,6 +128,7 @@ model Board {
   members   BoardMember[]
   invites   BoardInvite[]
   lists     List[]
+  labels    Label[]
 }
 
 model BoardMember {
@@ -201,7 +202,38 @@ model Card {
   // stays archived.
   archivedWithList Boolean @default(false)
 
-  list List @relation(fields: [listId], references: [id], onDelete: Cascade)
+  list   List        @relation(fields: [listId], references: [id], onDelete: Cascade)
+  labels CardLabel[]
 
   @@index([listId])
+}
+
+// Story 4.3 (FR24): per-board Label taxonomy (name + color, `color` a fixed
+// palette key from packages/shared's LABEL_COLORS — validated at the Zod
+// schema boundary, not a DB constraint) attached/removed on Cards via the
+// CardLabel join below.
+model Label {
+  id      String @id @default(uuid()) @db.Uuid
+  boardId String @db.Uuid
+  name    String
+  color   String
+
+  board Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards CardLabel[]
+
+  @@index([boardId])
+}
+
+// Plain many-to-many join, no attributes of its own — cascades from either
+// side per Architecture §4 (compositional data has no meaning once its
+// parent is gone).
+model CardLabel {
+  cardId  String @db.Uuid
+  labelId String @db.Uuid
+
+  card  Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, labelId])
+  @@index([labelId])
 }

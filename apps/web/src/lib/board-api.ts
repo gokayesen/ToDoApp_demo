@@ -1,12 +1,16 @@
 import type {
+  AttachCardLabelRequest,
   Board,
   Card,
   CreateCardRequest,
+  CreateLabelRequest,
   CreateListRequest,
+  Label,
   List,
   MoveCardRequest,
   MoveListRequest,
   UpdateCardRequest,
+  UpdateLabelRequest,
 } from '@todoapp/shared';
 
 import { apiFetch } from './api-client';
@@ -60,4 +64,37 @@ export function updateCard(cardId: string, input: UpdateCardRequest) {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+}
+
+export function listLabels(boardId: string) {
+  return apiFetch<Label[]>(`/boards/${boardId}/labels`);
+}
+
+export function createLabel(boardId: string, input: CreateLabelRequest) {
+  return apiFetch<Label>(`/boards/${boardId}/labels`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateLabel(labelId: string, input: UpdateLabelRequest) {
+  return apiFetch<Label>(`/labels/${labelId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteLabel(labelId: string) {
+  return apiFetch<void>(`/labels/${labelId}`, { method: 'DELETE' });
+}
+
+export function attachCardLabel(cardId: string, input: AttachCardLabelRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/labels`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function detachCardLabel(cardId: string, labelId: string) {
+  return apiFetch<Card>(`/cards/${cardId}/labels/${labelId}`, { method: 'DELETE' });
 }

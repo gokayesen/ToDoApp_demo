@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { labelSchema } from './label.js';
+
 export const createCardRequestSchema = z.object({
   title: z.string().min(1),
 });
@@ -27,6 +29,14 @@ export const updateCardRequestSchema = z.object({
 
 export type UpdateCardRequest = z.infer<typeof updateCardRequestSchema>;
 
+// FR24: attach a Board Label to a Card. Detach takes the labelId as a route
+// param instead (DELETE /cards/:cardId/labels/:labelId), no body needed.
+export const attachCardLabelRequestSchema = z.object({
+  labelId: z.string().uuid(),
+});
+
+export type AttachCardLabelRequest = z.infer<typeof attachCardLabelRequestSchema>;
+
 export const cardSchema = z.object({
   id: z.string().uuid(),
   listId: z.string().uuid(),
@@ -37,6 +47,10 @@ export const cardSchema = z.object({
   dueDate: z.coerce.date().nullable(),
   isArchived: z.boolean(),
   archivedWithList: z.boolean(),
+  // Story 4.3 (FR24): always present (possibly empty), never omitted — every
+  // backend Card query includes+flattens the CardLabel join so this field is
+  // consistent whichever endpoint returned the Card (see card.repository.ts).
+  labels: z.array(labelSchema),
 });
 
 export type Card = z.infer<typeof cardSchema>;
