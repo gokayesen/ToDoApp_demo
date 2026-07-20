@@ -19,13 +19,22 @@ export const moveCardRequestSchema = z.object({
 
 export type MoveCardRequest = z.infer<typeof moveCardRequestSchema>;
 
-// FR18: title and markdown description, both independently optional so the
-// same endpoint serves either field's inline-edit save (Story 4.2) without
-// forcing the caller to resend the one it isn't touching.
-export const updateCardRequestSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
-});
+// FR18/FR25: title, description, startDate, dueDate are all independently
+// optional so the same endpoint serves any single field's inline-edit save
+// (Story 4.2, Story 4.4) without forcing the caller to resend fields it isn't
+// touching. startDate/dueDate are nullable to allow clearing a previously-set
+// date.
+export const updateCardRequestSchema = z
+  .object({
+    title: z.string().min(1).optional(),
+    description: z.string().nullable().optional(),
+    startDate: z.coerce.date().nullable().optional(),
+    dueDate: z.coerce.date().nullable().optional(),
+  })
+  .refine((data) => !data.startDate || !data.dueDate || data.startDate <= data.dueDate, {
+    message: 'startDate must not be after dueDate',
+    path: ['startDate'],
+  });
 
 export type UpdateCardRequest = z.infer<typeof updateCardRequestSchema>;
 

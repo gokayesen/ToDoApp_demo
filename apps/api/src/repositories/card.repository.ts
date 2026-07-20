@@ -67,13 +67,17 @@ export async function updateCardPosition(
   return mapCard(row);
 }
 
-// Story 4.2 (FR18): title/description are independently optional in the
-// input, so this only writes the keys actually present rather than a fixed
-// { title, description } shape that would null out the field not being
-// edited on every save.
+// Story 4.2 (FR18) / Story 4.4 (FR25): every field is independently optional
+// in the input, so this only writes the keys actually present rather than a
+// fixed shape that would null out fields not being edited on a given save.
 export async function updateCardFields(
   id: string,
-  data: { title?: string; description?: string | null },
+  data: {
+    title?: string;
+    description?: string | null;
+    startDate?: Date | null;
+    dueDate?: Date | null;
+  },
   client: Client = prisma,
 ) {
   const row = await client.card.update({ where: { id }, data, include: withLabels });

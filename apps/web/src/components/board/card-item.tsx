@@ -3,7 +3,7 @@
 import type { Card, List } from '@todoapp/shared';
 import { SortableKeyboardPlugin } from '@dnd-kit/dom/sortable';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { ClockIcon, MoveIcon } from 'lucide-react';
+import { AlertTriangleIcon, CalendarIcon, ClockIcon, MoveIcon } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -11,9 +11,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getDueStatus } from '@/lib/due-date-status';
 import { LabelDot } from './label-badge';
 
 const dueDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+
+// FR25 / UX §8 "color is never the only signal": each due-date status pairs
+// its own color with its own icon shape and an sr-only text label, not just a
+// color swap on a shared icon.
+const DUE_STATUS_PRESENTATION = {
+  overdue: { icon: AlertTriangleIcon, className: 'text-red-600 dark:text-red-400', label: 'Overdue' },
+  'due-soon': { icon: ClockIcon, className: 'text-amber-600 dark:text-amber-400', label: 'Due soon' },
+  'on-track': { icon: CalendarIcon, className: 'text-muted-foreground', label: 'Due' },
+} as const;
 
 // FR19: cards reorder within/across Lists via drag (pointer + keyboard, via
 // dnd-kit's KeyboardSensor on the whole card — Space/Enter to pick up, arrow
@@ -112,12 +122,18 @@ export function CardItem({
           ))}
         </div>
       )}
-      {card.dueDate && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <ClockIcon className="size-3" />
-          {dueDateFormatter.format(new Date(card.dueDate))}
-        </div>
-      )}
+      {card.dueDate &&
+        (() => {
+          const status = getDueStatus(card.dueDate)!;
+          const { icon: StatusIcon, className, label } = DUE_STATUS_PRESENTATION[status];
+          return (
+            <div className={`flex items-center gap-1 text-xs ${className}`}>
+              <StatusIcon className="size-3" />
+              <span className="sr-only">{label}: </span>
+              {dueDateFormatter.format(new Date(card.dueDate))}
+            </div>
+          );
+        })()}
     </div>
   );
 }

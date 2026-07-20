@@ -9,9 +9,24 @@ import Markdown from 'react-markdown';
 
 import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
+import { getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
 import { LabelChip } from './label-badge';
 import { LabelPicker } from './label-picker';
+
+// FR25: dates are stored/returned as ISO strings over the wire (see
+// card-item.tsx's same raw-string convention) — slicing the date part
+// directly avoids a local-timezone round-trip shift that constructing a new
+// Date and reading its local getMonth/getDate would introduce.
+function toDateInputValue(value: string | Date | null | undefined): string {
+  return value ? String(value).slice(0, 10) : '';
+}
+
+const DUE_STATUS_TEXT = {
+  overdue: 'text-red-600 dark:text-red-400',
+  'due-soon': 'text-amber-600 dark:text-amber-400',
+  'on-track': 'text-muted-foreground',
+} as const;
 
 // Story 4.1 (UX §4.3): the Card Detail shell — title + List/Board breadcrumb
 // + close button. Story 4.2 (FR18) adds inline-editable title/description;
@@ -55,7 +70,12 @@ export function CardDetail({
   }, [card?.id]);
 
   const mutation = useMutation({
-    mutationFn: (input: { title?: string; description?: string | null }) => {
+    mutationFn: (input: {
+      title?: string;
+      description?: string | null;
+      startDate?: Date | null;
+      dueDate?: Date | null;
+    }) => {
       if (!card) throw new Error('No card open');
       return updateCard(card.id, input);
     },
@@ -196,6 +216,43 @@ export function CardDetail({
                   </div>
                 </div>
               )}
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Dates</span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    Start
+                    <input
+                      type="date"
+                      value={toDateInputValue(card.startDate)}
+                      onChange={(e) =>
+                        mutation.mutate({ startDate: e.target.value ? new Date(e.target.value) : null })
+                      }
+                      className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    Due
+                    <input
+                      type="date"
+                      value={toDateInputValue(card.dueDate)}
+                      onChange={(e) =>
+                        mutation.mutate({ dueDate: e.target.value ? new Date(e.target.value) : null })
+                      }
+                      className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  </label>
+                  {card.dueDate &&
+                    (() => {
+                      const status = getDueStatus(card.dueDate)!;
+                      return (
+                        <span className={cn('text-xs font-medium', DUE_STATUS_TEXT[status])}>
+                          {status === 'overdue' ? 'Overdue' : status === 'due-soon' ? 'Due soon' : 'On track'}
+                        </span>
+                      );
+                    })()}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Description</span>
