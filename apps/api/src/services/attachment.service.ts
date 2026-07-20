@@ -10,6 +10,7 @@ import {
 } from '../repositories/attachment.repository.js';
 import { findUserById } from '../repositories/user.repository.js';
 import { emitCardUpdated } from '../sockets/broadcast.js';
+import { logActivity } from './activity-log.service.js';
 
 // FR29 step 1: requireRole('MEMBER') on the route already excludes Viewers.
 // Doesn't touch the DB at all — the Attachment row is only created once the
@@ -41,6 +42,13 @@ export async function createAttachment(
 
   const uploader = await findUserById(actorId);
   await createAttachmentForCard(card.id, actorId, uploader!.name, input);
+  await logActivity({
+    boardId,
+    cardId: card.id,
+    actorId,
+    type: 'attachment.added',
+    metadata: { fileName: input.fileName },
+  });
 
   const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);
@@ -62,6 +70,13 @@ export async function deleteAttachment(
   }
 
   await deleteAttachmentRow(attachment.id);
+  await logActivity({
+    boardId,
+    cardId: card.id,
+    actorId,
+    type: 'attachment.removed',
+    metadata: { fileName: attachment.fileName },
+  });
   // Best-effort — the DB row deletion (the source of truth for what the app
   // shows) has already committed either way; see r2.ts's comment.
   await deleteObjectForFileUrl(attachment.fileUrl).catch((error: unknown) => {

@@ -26,8 +26,14 @@ import {
 } from '../repositories/card.repository.js';
 import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
+import { findUserById } from '../repositories/user.repository.js';
 import { emitCardCreated, emitCardDeleted, emitCardMoved, emitCardUpdated } from '../sockets/broadcast.js';
+import { logActivity } from './activity-log.service.js';
 import { computePosition } from './position.service.js';
+
+function dateChanged(before: Date | null, after: Date | null | undefined): boolean {
+  return after !== undefined && (before?.getTime() ?? null) !== (after?.getTime() ?? null);
+}
 
 // FR17: same MEMBER-minimum role gate and append-at-end positioning as
 // list.service.ts createList.
@@ -46,10 +52,50 @@ export function listCards(list: List) {
 // FR18: inline-editable title/description (Story 4.2). requireRole('MEMBER')
 // on the route already excludes Viewers, same gate as every other Card
 // mutation above.
-export async function updateCard(card: Card, boardId: string, input: UpdateCardRequest): Promise<Card> {
-  const updated = await updateCardFields(card.id, input);
-  emitCardUpdated(boardId, updated);
-  return updated;
+export async function updateCard(
+  card: Card,
+  boardId: string,
+  actorId: string,
+  input: UpdateCardRequest,
+): Promise<Card> {
+  await updateCardFields(card.id, input);
+
+  // FR30: one entry per field that actually changed, not one generic "card
+  // updated" entry — an actionable Activity feed names what happened.
+  if (input.title !== undefined && input.title !== card.title) {
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'card.renamed',
+      metadata: { from: card.title, to: input.title },
+    });
+  }
+  if (input.description !== undefined && input.description !== card.description) {
+    await logActivity({ boardId, cardId: card.id, actorId, type: 'card.description_updated', metadata: {} });
+  }
+  if (dateChanged(card.startDate, input.startDate)) {
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'card.start_date_changed',
+      metadata: { from: card.startDate?.toISOString() ?? null, to: input.startDate?.toISOString() ?? null },
+    });
+  }
+  if (dateChanged(card.dueDate, input.dueDate)) {
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'card.due_date_changed',
+      metadata: { from: card.dueDate?.toISOString() ?? null, to: input.dueDate?.toISOString() ?? null },
+    });
+  }
+
+  const updated = await findCardById(card.id);
+  emitCardUpdated(boardId, updated!);
+  return updated!;
 }
 
 // boardId comes from the caller (card.controller.ts's req.board) rather than
@@ -64,17 +110,27 @@ export async function deleteCard(card: Card, boardId: string): Promise<void> {
 // FR21: requireRole('MEMBER') on the route already excludes Viewers.
 // Idempotent, same rationale as board.service.ts archiveBoard/restoreBoard
 // and list.service.ts archiveList/restoreList — re-affirming an already-
-// (non)archived state isn't a meaningful conflict.
-export async function archiveCard(card: Card, boardId: string): Promise<Card> {
-  const updated = await setCardArchived(card.id, true);
-  emitCardUpdated(boardId, updated);
-  return updated;
+// (non)archived state isn't a meaningful conflict. Only logs an Activity
+// entry when the state actually flips, so re-affirming an already-
+// (non)archived state doesn't also spam the feed with a no-op entry.
+export async function archiveCard(card: Card, boardId: string, actorId: string): Promise<Card> {
+  await setCardArchived(card.id, true);
+  if (!card.isArchived) {
+    await logActivity({ boardId, cardId: card.id, actorId, type: 'card.archived', metadata: {} });
+  }
+  const updated = await findCardById(card.id);
+  emitCardUpdated(boardId, updated!);
+  return updated!;
 }
 
-export async function restoreCard(card: Card, boardId: string): Promise<Card> {
-  const updated = await setCardArchived(card.id, false);
-  emitCardUpdated(boardId, updated);
-  return updated;
+export async function restoreCard(card: Card, boardId: string, actorId: string): Promise<Card> {
+  await setCardArchived(card.id, false);
+  if (card.isArchived) {
+    await logActivity({ boardId, cardId: card.id, actorId, type: 'card.restored', metadata: {} });
+  }
+  const updated = await findCardById(card.id);
+  emitCardUpdated(boardId, updated!);
+  return updated!;
 }
 
 // FR19: reorders/moves happen relative to live neighbors on the target List,
@@ -95,11 +151,13 @@ export async function moveCard(
     throw new HttpError(400, 'A card cannot be moved relative to itself');
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
+  let targetListName = currentList.name;
+  await prisma.$transaction(async (tx) => {
     const targetList = listId === currentList.id ? currentList : await findListById(listId, tx);
     if (!targetList || targetList.boardId !== currentList.boardId) {
       throw new HttpError(400, 'listId must reference a List on the same board');
     }
+    targetListName = targetList.name;
 
     const afterCard = afterCardId ? await findCardById(afterCardId, tx) : null;
     const beforeCard = beforeCardId ? await findCardById(beforeCardId, tx) : null;
@@ -112,29 +170,66 @@ export async function moveCard(
     }
 
     const position = computePosition(afterCard?.position ?? null, beforeCard?.position ?? null);
-    return updateCardPosition(card.id, listId, position, tx);
+    await updateCardPosition(card.id, listId, position, tx);
   });
-  emitCardMoved(currentList.boardId, updated, actorId);
-  return updated;
+
+  // FR30 / UX §4.3 example ("Ayşe moved this card from To Do to Doing"): only
+  // a cross-list move is worth an Activity entry — a pure within-list
+  // reorder is just visual ordering, not a status change.
+  if (listId !== currentList.id) {
+    await logActivity({
+      boardId: currentList.boardId,
+      cardId: card.id,
+      actorId,
+      type: 'card.moved',
+      metadata: { fromListName: currentList.name, toListName: targetListName },
+    });
+  }
+
+  const updated = await findCardById(card.id);
+  emitCardMoved(currentList.boardId, updated!, actorId);
+  return updated!;
 }
 
 // FR24: requireRole('MEMBER') on the route already excludes Viewers — same
 // gate as every other Card mutation above, distinct from the Label
 // taxonomy's own ADMIN-gated CRUD (label.service.ts). Cross-board attach is
 // rejected the same way moveCard rejects a cross-board target List.
-export async function attachLabel(card: Card, boardId: string, input: AttachCardLabelRequest) {
+export async function attachLabel(card: Card, boardId: string, actorId: string, input: AttachCardLabelRequest) {
   const label = await findLabelById(input.labelId);
   if (!label || label.boardId !== boardId) {
     throw new HttpError(400, 'labelId must reference a Label on the same board');
   }
 
-  const updated = await attachLabelToCard(card.id, label.id);
+  await attachLabelToCard(card.id, label.id);
+  await logActivity({
+    boardId,
+    cardId: card.id,
+    actorId,
+    type: 'label.attached',
+    metadata: { labelName: label.name },
+  });
+
+  const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);
   return updated;
 }
 
-export async function detachLabel(card: Card, boardId: string, labelId: string) {
-  const updated = await detachLabelFromCard(card.id, labelId);
+export async function detachLabel(card: Card, boardId: string, actorId: string, labelId: string) {
+  const label = await findLabelById(labelId);
+
+  await detachLabelFromCard(card.id, labelId);
+  if (label) {
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'label.detached',
+      metadata: { labelName: label.name },
+    });
+  }
+
+  const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);
   return updated;
 }
@@ -143,17 +238,40 @@ export async function detachLabel(card: Card, boardId: string, labelId: string) 
 // gate as every other Card mutation above. The assignee must be an explicit
 // Board Member (see board-member.repository.ts listBoardMembers comment on
 // why the Workspace Owner's implicit access doesn't count here either).
-export async function assignUser(card: Card, boardId: string, input: AssignCardRequest) {
+export async function assignUser(card: Card, boardId: string, actorId: string, input: AssignCardRequest) {
   const membership = await findBoardMember(boardId, input.userId);
   if (!membership) throw new HttpError(400, 'userId must reference a member of this board');
 
-  const updated = await assignUserToCard(card.id, input.userId);
+  const assignee = await findUserById(input.userId);
+  await assignUserToCard(card.id, input.userId);
+  await logActivity({
+    boardId,
+    cardId: card.id,
+    actorId,
+    type: 'assignee.added',
+    metadata: { userName: assignee!.name },
+  });
+
+  const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);
   return updated;
 }
 
-export async function unassignUser(card: Card, boardId: string, userId: string) {
-  const updated = await unassignUserFromCard(card.id, userId);
+export async function unassignUser(card: Card, boardId: string, actorId: string, userId: string) {
+  const assignee = await findUserById(userId);
+
+  await unassignUserFromCard(card.id, userId);
+  if (assignee) {
+    await logActivity({
+      boardId,
+      cardId: card.id,
+      actorId,
+      type: 'assignee.removed',
+      metadata: { userName: assignee.name },
+    });
+  }
+
+  const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);
   return updated;
 }

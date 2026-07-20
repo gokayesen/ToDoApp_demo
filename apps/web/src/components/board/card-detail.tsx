@@ -322,7 +322,7 @@ export function CardDetail({
 
               {list && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Comments</span>
+                  <span className="text-xs font-medium text-muted-foreground">Activity</span>
                   <CommentSection card={card} boardId={boardId} listId={list.id} />
                 </div>
               )}

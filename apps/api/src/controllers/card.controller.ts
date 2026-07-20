@@ -14,7 +14,7 @@ export const listCardsHandler = asyncHandler(async (req: Request, res: Response)
 });
 
 export const updateCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.updateCard(req.card!, req.board!.id, req.body);
+  const card = await cardService.updateCard(req.card!, req.board!.id, req.userId!, req.body);
   res.json(card);
 });
 
@@ -29,31 +29,31 @@ export const moveCardHandler = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const attachLabelHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.attachLabel(req.card!, req.board!.id, req.body);
+  const card = await cardService.attachLabel(req.card!, req.board!.id, req.userId!, req.body);
   res.json(card);
 });
 
 export const detachLabelHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.detachLabel(req.card!, req.board!.id, req.params.labelId!);
+  const card = await cardService.detachLabel(req.card!, req.board!.id, req.userId!, req.params.labelId!);
   res.json(card);
 });
 
 export const assignUserHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.assignUser(req.card!, req.board!.id, req.body);
+  const card = await cardService.assignUser(req.card!, req.board!.id, req.userId!, req.body);
   res.json(card);
 });
 
 export const unassignUserHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.unassignUser(req.card!, req.board!.id, req.params.userId!);
+  const card = await cardService.unassignUser(req.card!, req.board!.id, req.userId!, req.params.userId!);
   res.json(card);
 });
 
 export const archiveCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.archiveCard(req.card!, req.board!.id);
+  const card = await cardService.archiveCard(req.card!, req.board!.id, req.userId!);
   res.json(card);
 });
 
 export const restoreCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.restoreCard(req.card!, req.board!.id);
+  const card = await cardService.restoreCard(req.card!, req.board!.id, req.userId!);
   res.json(card);
 });

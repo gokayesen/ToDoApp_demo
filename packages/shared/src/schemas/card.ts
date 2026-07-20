@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { activityLogEntrySchema } from './activity-log.js';
 import { attachmentSchema } from './attachment.js';
 import { checklistSchema } from './checklist.js';
 import { commentSchema } from './comment.js';
@@ -70,16 +71,18 @@ export const cardSchema = z.object({
   isArchived: z.boolean(),
   archivedWithList: z.boolean(),
   // Story 4.3 (FR24) / Story 4.5 (FR26) / Story 4.6 (FR27) / Story 4.7 (FR28) /
-  // Story 4.8 (FR29): always present (possibly empty), never omitted — every
-  // backend Card query includes+flattens the CardLabel/CardAssignee/
-  // Checklist/Comment/Attachment joins so these fields are consistent
-  // whichever endpoint returned the Card (see card.repository.ts). comments
-  // and attachments are both chronological (createdAt asc).
+  // Story 4.8 (FR29) / Story 4.9 (FR30): always present (possibly empty),
+  // never omitted — every backend Card query includes+flattens the
+  // CardLabel/CardAssignee/Checklist/Comment/Attachment/ActivityLog joins so
+  // these fields are consistent whichever endpoint returned the Card (see
+  // card.repository.ts). comments/attachments/activityLog are all
+  // chronological (createdAt asc).
   labels: z.array(labelSchema),
   assignees: z.array(userProfileSchema),
   checklists: z.array(checklistSchema),
   comments: z.array(commentSchema),
   attachments: z.array(attachmentSchema),
+  activityLog: z.array(activityLogEntrySchema),
 });
 
 export type Card = z.infer<typeof cardSchema>;

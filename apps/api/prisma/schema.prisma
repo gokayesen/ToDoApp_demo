@@ -34,14 +34,15 @@ model User {
   oauthAccounts        OAuthAccount[]
   refreshTokens        RefreshToken[]
   passwordResetTokens  PasswordResetToken[]
-  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
+  ownedWorkspaces      Workspace[]          @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   boardMemberships     BoardMember[]
-  sentWorkspaceInvites WorkspaceInvite[]     @relation("WorkspaceInviteSender")
-  sentBoardInvites     BoardInvite[]         @relation("BoardInviteSender")
+  sentWorkspaceInvites WorkspaceInvite[]    @relation("WorkspaceInviteSender")
+  sentBoardInvites     BoardInvite[]        @relation("BoardInviteSender")
   cardAssignments      CardAssignee[]
   comments             Comment[]
   attachments          Attachment[]
+  activityLogEntries   ActivityLog[]
 }
 
 model OAuthAccount {
@@ -57,13 +58,13 @@ model OAuthAccount {
 }
 
 model RefreshToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  tokenHash  String
-  familyId   String    @db.Uuid
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String
+  familyId  String    @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -127,11 +128,12 @@ model Board {
   background  String?
   isArchived  Boolean @default(false)
 
-  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  members   BoardMember[]
-  invites   BoardInvite[]
-  lists     List[]
-  labels    Label[]
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     BoardMember[]
+  invites     BoardInvite[]
+  lists       List[]
+  labels      Label[]
+  activityLog ActivityLog[]
 }
 
 model BoardMember {
@@ -189,21 +191,21 @@ model List {
 // ahead of Story 3.8's own direct per-Card archive/restore, but all are
 // included now to match the full Card model in Architecture §4.
 model Card {
-  id          String    @id @default(uuid()) @db.Uuid
-  listId      String    @db.Uuid
-  title       String
-  description String?
-  position    Float
-  startDate   DateTime?
-  dueDate     DateTime?
-  isArchived  Boolean   @default(false)
+  id               String    @id @default(uuid()) @db.Uuid
+  listId           String    @db.Uuid
+  title            String
+  description      String?
+  position         Float
+  startDate        DateTime?
+  dueDate          DateTime?
+  isArchived       Boolean   @default(false)
   // Story 3.7 (FR16): set alongside isArchived when a List archive cascades
   // to this Card, cleared when that cascade is undone by restoring the List.
   // Distinguishes "archived because its List was archived" from a future
   // direct per-Card archive (Story 3.8), so restoring a List only brings back
   // Cards it cascade-archived — one a user independently archived beforehand
   // stays archived.
-  archivedWithList Boolean @default(false)
+  archivedWithList Boolean   @default(false)
 
   list        List           @relation(fields: [listId], references: [id], onDelete: Cascade)
   labels      CardLabel[]
@@ -211,6 +213,7 @@ model Card {
   checklists  Checklist[]
   comments    Comment[]
   attachments Attachment[]
+  activityLog ActivityLog[]
 
   @@index([listId])
 }
@@ -291,6 +294,39 @@ model Attachment {
   card     Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
   uploader User? @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
+  @@index([cardId])
+}
+
+// Story 4.9 (FR30): system-generated entries interleaved with Comments in
+// Card Detail's Activity feed (UX §4.3). boardId is required (every entry
+// belongs to a Board) while cardId is nullable — this story only ever writes
+// card-scoped entries, but the model leaves room for board-level activity
+// (e.g. membership changes) that no current story populates yet, matching
+// Architecture §4's ER diagram exactly. `type` is a fixed string key (see
+// packages/shared's activityTypeSchema enum) with a freeform `metadata` JSON
+// payload shaped per type — same "string + Zod-validated enum, not a DB
+// enum" choice as Label.color. userId/actorNameSnapshot follow the same
+// SetNull + denormalized-snapshot pattern as Comment.userId. cardId is
+// SetNull (not Cascade) on Card deletion — per Architecture §4's stated
+// rationale for the User-facing SetNull relations ("preserves shared board
+// history... including the audit trail itself"), a Card's own deletion
+// shouldn't erase the board's history of what happened to it, only orphan
+// the specific card reference.
+model ActivityLog {
+  id                String   @id @default(uuid()) @db.Uuid
+  boardId           String   @db.Uuid
+  cardId            String?  @db.Uuid
+  userId            String?  @db.Uuid
+  actorNameSnapshot String
+  type              String
+  metadata          Json
+  createdAt         DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  card  Card? @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
   @@index([cardId])
 }
 

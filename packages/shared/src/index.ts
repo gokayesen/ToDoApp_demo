@@ -1,3 +1,4 @@
+export * from './schemas/activity-log.js';
 export * from './schemas/attachment.js';
 export * from './schemas/board.js';
 export * from './schemas/card.js';
