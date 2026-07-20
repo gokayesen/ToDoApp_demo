@@ -6,6 +6,7 @@ import type {
   List,
   MoveCardRequest,
   MoveListRequest,
+  UpdateCardRequest,
 } from '@todoapp/shared';
 
 import { apiFetch } from './api-client';
@@ -50,6 +51,13 @@ export function createCard(listId: string, input: CreateCardRequest) {
 export function moveCard(cardId: string, input: MoveCardRequest) {
   return apiFetch<Card>(`/cards/${cardId}/move`, {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateCard(cardId: string, input: UpdateCardRequest) {
+  return apiFetch<Card>(`/cards/${cardId}`, {
+    method: 'PATCH',
     body: JSON.stringify(input),
   });
 }

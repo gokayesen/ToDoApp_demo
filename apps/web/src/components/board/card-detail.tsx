@@ -2,15 +2,19 @@
 
 import type { Card, List } from '@todoapp/shared';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { XIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import Markdown from 'react-markdown';
 
+import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-// Story 4.1 (UX §4.3): the Card Detail shell only — title + List/Board
-// breadcrumb + close button. Metadata row, description, checklists,
-// attachments, and the comment/activity feed are separate Epic 4 stories
-// layered into the body below the header.
+// Story 4.1 (UX §4.3): the Card Detail shell — title + List/Board breadcrumb
+// + close button. Story 4.2 (FR18) adds inline-editable title/description
+// within that shell. Labels, dates, assignees, checklists, attachments, and
+// the comment/activity feed are separate later Epic 4 stories.
 //
 // UX §7: full-screen sheet by default (mobile), centered modal from `sm:` up
 // (desktop) — one Popup with responsive classes rather than two components,
@@ -28,6 +32,97 @@ export function CardDetail({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  // A field losing focus because Escape unmounted it (React removing a
+  // still-focused node triggers a native blur) must not also save — this
+  // flag lets onBlur tell that case apart from an intentional blur-to-save.
+  const cancelledRef = useRef(false);
+
+  // A newly-opened Card starts in read (rendered) mode, not mid-edit from
+  // whichever Card was open before it.
+  useEffect(() => {
+    setEditingTitle(false);
+    setEditingDescription(false);
+  }, [card?.id]);
+
+  const mutation = useMutation({
+    mutationFn: (input: { title?: string; description?: string | null }) => {
+      if (!card) throw new Error('No card open');
+      return updateCard(card.id, input);
+    },
+    // Patch the list's cache directly with the server's response rather than
+    // invalidating — invalidate would refetch and briefly flash the
+    // pre-edit title/description before the network round-trip resolves.
+    onSuccess: (updated) => {
+      if (!list) return;
+      queryClient.setQueryData(['cards', list.id], (old: Card[] | undefined) =>
+        old?.map((c) => (c.id === updated.id ? updated : c)),
+      );
+    },
+  });
+
+  function startEditingTitle() {
+    if (!card) return;
+    cancelledRef.current = false;
+    setTitleDraft(card.title);
+    setEditingTitle(true);
+  }
+
+  function startEditingDescription() {
+    if (!card) return;
+    cancelledRef.current = false;
+    setDescriptionDraft(card.description ?? '');
+    setEditingDescription(true);
+  }
+
+  function saveTitle() {
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      return;
+    }
+    const value = titleDraft.trim();
+    setEditingTitle(false);
+    if (!card || !value || value === card.title) return;
+    mutation.mutate({ title: value });
+  }
+
+  function saveDescription() {
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      return;
+    }
+    const value = descriptionDraft.trim();
+    setEditingDescription(false);
+    if (!card || value === (card.description ?? '')) return;
+    mutation.mutate({ description: value || null });
+  }
+
+  function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveTitle();
+    } else if (event.key === 'Escape') {
+      // Without stopPropagation, Escape bubbles up to the Dialog's own
+      // Escape-to-close handler and closes the whole Card Detail instead of
+      // just cancelling the title edit.
+      event.stopPropagation();
+      cancelledRef.current = true;
+      setEditingTitle(false);
+    }
+  }
+
+  function handleDescriptionKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      cancelledRef.current = true;
+      setEditingDescription(false);
+    }
+  }
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -43,23 +138,83 @@ export function CardDetail({
           )}
         >
           {card && (
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">
-                  {boardName}
-                  {list ? ` / ${list.name}` : ''}
-                </p>
-                <DialogPrimitive.Title className="truncate font-heading text-lg font-medium text-foreground">
-                  {card.title}
-                </DialogPrimitive.Title>
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs text-muted-foreground">
+                    {boardName}
+                    {list ? ` / ${list.name}` : ''}
+                  </p>
+                  {/* Always-present accessible name for the dialog, independent of
+                      whether the visible title below is mid-edit. */}
+                  <DialogPrimitive.Title className="sr-only">{card.title}</DialogPrimitive.Title>
+                  {editingTitle ? (
+                    <input
+                      autoFocus
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onBlur={saveTitle}
+                      onKeyDown={handleTitleKeyDown}
+                      className="w-full rounded-md border border-input bg-background px-1.5 py-1 font-heading text-lg font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  ) : (
+                    <h2
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Edit title"
+                      onClick={startEditingTitle}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') startEditingTitle();
+                      }}
+                      className="cursor-text truncate rounded-md px-1.5 py-1 -mx-1.5 font-heading text-lg font-medium text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {card.title}
+                    </h2>
+                  )}
+                </div>
+                <DialogPrimitive.Close
+                  data-slot="dialog-close"
+                  render={<Button variant="ghost" size="icon-sm" aria-label="Close card" />}
+                >
+                  <XIcon />
+                </DialogPrimitive.Close>
               </div>
-              <DialogPrimitive.Close
-                data-slot="dialog-close"
-                render={<Button variant="ghost" size="icon-sm" aria-label="Close card" />}
-              >
-                <XIcon />
-              </DialogPrimitive.Close>
-            </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Description</span>
+                {editingDescription ? (
+                  <textarea
+                    autoFocus
+                    rows={6}
+                    value={descriptionDraft}
+                    onChange={(e) => setDescriptionDraft(e.target.value)}
+                    onBlur={saveDescription}
+                    onKeyDown={handleDescriptionKeyDown}
+                    placeholder="Write a description in Markdown…"
+                    className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                ) : (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Edit description"
+                    onClick={startEditingDescription}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') startEditingDescription();
+                    }}
+                    className="min-h-16 cursor-text rounded-md px-2.5 py-1.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {card.description ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <Markdown>{card.description}</Markdown>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Add a description…</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

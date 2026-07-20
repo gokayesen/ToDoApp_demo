@@ -34,6 +34,18 @@ export function updateCardPosition(id: string, listId: string, position: number,
   return client.card.update({ where: { id }, data: { listId, position } });
 }
 
+// Story 4.2 (FR18): title/description are independently optional in the
+// input, so this only writes the keys actually present rather than a fixed
+// { title, description } shape that would null out the field not being
+// edited on every save.
+export function updateCardFields(
+  id: string,
+  data: { title?: string; description?: string | null },
+  client: Client = prisma,
+) {
+  return client.card.update({ where: { id }, data });
+}
+
 export function deleteCard(id: string) {
   return prisma.card.delete({ where: { id } });
 }

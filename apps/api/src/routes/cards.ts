@@ -1,4 +1,4 @@
-import { moveCardRequestSchema } from '@todoapp/shared';
+import { moveCardRequestSchema, updateCardRequestSchema } from '@todoapp/shared';
 import { Router } from 'express';
 
 import {
@@ -6,6 +6,7 @@ import {
   deleteCardHandler,
   moveCardHandler,
   restoreCardHandler,
+  updateCardHandler,
 } from '../controllers/card.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadCardContext } from '../middleware/load-resource-context.js';
@@ -17,6 +18,12 @@ export const cardsRouter = Router();
 cardsRouter.use(authenticate);
 cardsRouter.use('/:cardId', loadCardContext);
 
+cardsRouter.patch(
+  '/:cardId',
+  requireRole('MEMBER'),
+  validateBody(updateCardRequestSchema),
+  updateCardHandler,
+);
 cardsRouter.delete('/:cardId', requireRole('MEMBER'), deleteCardHandler);
 cardsRouter.post(
   '/:cardId/move',

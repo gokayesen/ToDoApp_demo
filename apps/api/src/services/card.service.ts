@@ -1,5 +1,5 @@
 import type { Card, List } from '@prisma/client';
-import type { CreateCardRequest, MoveCardRequest } from '@todoapp/shared';
+import type { CreateCardRequest, MoveCardRequest, UpdateCardRequest } from '@todoapp/shared';
 
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
@@ -10,6 +10,7 @@ import {
   findLastCardPosition,
   listCardsForList,
   setCardArchived,
+  updateCardFields,
   updateCardPosition,
 } from '../repositories/card.repository.js';
 import { findListById } from '../repositories/list.repository.js';
@@ -28,6 +29,15 @@ export async function createCard(list: List, input: CreateCardRequest, actorId: 
 
 export function listCards(list: List) {
   return listCardsForList(list.id);
+}
+
+// FR18: inline-editable title/description (Story 4.2). requireRole('MEMBER')
+// on the route already excludes Viewers, same gate as every other Card
+// mutation above.
+export async function updateCard(card: Card, boardId: string, input: UpdateCardRequest): Promise<Card> {
+  const updated = await updateCardFields(card.id, input);
+  emitCardUpdated(boardId, updated);
+  return updated;
 }
 
 // boardId comes from the caller (card.controller.ts's req.board) rather than

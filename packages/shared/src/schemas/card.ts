@@ -17,6 +17,16 @@ export const moveCardRequestSchema = z.object({
 
 export type MoveCardRequest = z.infer<typeof moveCardRequestSchema>;
 
+// FR18: title and markdown description, both independently optional so the
+// same endpoint serves either field's inline-edit save (Story 4.2) without
+// forcing the caller to resend the one it isn't touching.
+export const updateCardRequestSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+});
+
+export type UpdateCardRequest = z.infer<typeof updateCardRequestSchema>;
+
 export const cardSchema = z.object({
   id: z.string().uuid(),
   listId: z.string().uuid(),
