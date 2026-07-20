@@ -49,8 +49,8 @@ export default function BoardViewPage() {
   }, [board]);
 
   // Story 5.1: join the board's realtime room while this page is open.
-  // Story 5.2 adds the live presence avatar stack below; card/list broadcasts
-  // (Story 5.3) still aren't consumed by the client yet.
+  // Story 5.2 adds the live presence avatar stack below; BoardLists (Story
+  // 5.4) merges Story 5.3's card/list broadcasts into the query cache.
   useBoardRoom(boardId);
   const presence = usePresence(boardId);
 
@@ -76,7 +76,7 @@ export default function BoardViewPage() {
           {listsLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
-            <BoardLists boardId={boardId} lists={lists ?? []} />
+            <BoardLists boardId={boardId} lists={lists ?? []} currentUserId={user.id} />
           )}
         </div>
       </div>

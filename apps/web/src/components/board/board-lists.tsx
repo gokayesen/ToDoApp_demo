@@ -6,8 +6,10 @@ import { move } from '@dnd-kit/helpers';
 import { DragDropProvider, type DragEndEvent, type DragOverEvent } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { useBoardLiveUpdates } from '@/hooks/use-board-live-updates';
+import { useFlipAnimation } from '@/hooks/use-flip-animation';
 import { listCards, moveCard, moveList } from '@/lib/board-api';
 import { AddListForm } from './add-list-form';
 import { ListColumn } from './list-column';
@@ -30,10 +32,29 @@ type CardsByList = Record<string, Card[]>;
 // drag, which raced React's own reconciliation once state updated on drop
 // and crashed with a `removeChild` DOM error — so Card reordering is driven
 // entirely by React state instead, live, via `onDragOver`.
-export function BoardLists({ boardId, lists }: { boardId: string; lists: List[] }) {
+export function BoardLists({
+  boardId,
+  lists,
+  currentUserId,
+}: {
+  boardId: string;
+  lists: List[];
+  currentUserId: string;
+}) {
   const [orderedLists, setOrderedLists] = useState(lists);
   const [cardsByList, setCardsByList] = useState<CardsByList>({});
+  const [isDragging, setIsDragging] = useState(false);
   const queryClient = useQueryClient();
+  const highlightedIds = useBoardLiveUpdates(boardId, currentUserId);
+
+  const flipContainerRef = useRef<HTMLDivElement>(null);
+  const flipKey =
+    orderedLists.map((list) => list.id).join(',') +
+    '|' +
+    orderedLists.map((list) => (cardsByList[list.id] ?? []).map((card) => card.id).join(',')).join(';');
+  // Skip animating this client's own active drag — dnd-kit already gives
+  // that its own live per-frame transform (use-flip-animation.ts).
+  useFlipAnimation(flipContainerRef, flipKey, !isDragging);
 
   useEffect(() => {
     setOrderedLists(lists);
@@ -170,20 +191,34 @@ export function BoardLists({ boardId, lists }: { boardId: string; lists: List[] 
   }
 
   return (
-    <DragDropProvider sensors={sensors} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-      {orderedLists.map((list, index) => (
-        <ListColumn
-          key={list.id}
-          boardId={boardId}
-          list={list}
-          index={index}
-          cards={cardsByList[list.id] ?? []}
-          isLoading={cardsLoading}
-          otherLists={orderedLists.filter((l) => l.id !== list.id)}
-          onMoveToList={handleMoveToList}
-        />
-      ))}
-      <AddListForm boardId={boardId} />
-    </DragDropProvider>
+    // `contents` keeps this a transparent pass-through in the parent's flex
+    // layout (board page's list row) while still giving use-flip-animation a
+    // DOM node to scope its querySelectorAll to.
+    <div ref={flipContainerRef} className="contents">
+      <DragDropProvider
+        sensors={sensors}
+        onDragStart={() => setIsDragging(true)}
+        onDragOver={handleDragOver}
+        onDragEnd={(event) => {
+          setIsDragging(false);
+          handleDragEnd(event);
+        }}
+      >
+        {orderedLists.map((list, index) => (
+          <ListColumn
+            key={list.id}
+            boardId={boardId}
+            list={list}
+            index={index}
+            cards={cardsByList[list.id] ?? []}
+            isLoading={cardsLoading}
+            otherLists={orderedLists.filter((l) => l.id !== list.id)}
+            onMoveToList={handleMoveToList}
+            highlightedIds={highlightedIds}
+          />
+        ))}
+        <AddListForm boardId={boardId} />
+      </DragDropProvider>
+    </div>
   );
 }

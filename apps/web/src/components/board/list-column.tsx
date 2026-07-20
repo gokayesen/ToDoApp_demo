@@ -34,6 +34,7 @@ export function ListColumn({
   isLoading,
   otherLists,
   onMoveToList,
+  highlightedIds,
 }: {
   boardId: string;
   list: List;
@@ -42,6 +43,7 @@ export function ListColumn({
   isLoading: boolean;
   otherLists: List[];
   onMoveToList: (cardId: string, targetListId: string) => void;
+  highlightedIds: Set<string>;
 }) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLHeadingElement>(null);
@@ -58,8 +60,13 @@ export function ListColumn({
   return (
     <div
       ref={setElement}
+      data-flip-id={list.id}
       className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted p-2"
-      style={{ opacity: isDragging ? 0.5 : 1 }}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        boxShadow: highlightedIds.has(list.id) ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
+        transition: 'box-shadow 1.5s ease-out',
+      }}
     >
       <div className="flex items-center gap-1">
         <h3
@@ -101,6 +108,7 @@ export function ListColumn({
               listId={list.id}
               otherLists={otherLists}
               onMoveToList={onMoveToList}
+              isHighlighted={highlightedIds.has(card.id)}
             />
           ))
         )}

@@ -28,12 +28,14 @@ export function CardItem({
   listId,
   otherLists,
   onMoveToList,
+  isHighlighted,
 }: {
   card: Card;
   index: number;
   listId: string;
   otherLists: List[];
   onMoveToList: (cardId: string, targetListId: string) => void;
+  isHighlighted: boolean;
 }) {
   const { ref, isDragging } = useSortable({
     id: card.id,
@@ -53,9 +55,17 @@ export function CardItem({
   return (
     <div
       ref={ref}
+      data-flip-id={card.id}
       tabIndex={0}
       className="group flex cursor-grab flex-col gap-1 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-sm outline-none ring-1 ring-foreground/10 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ opacity: isDragging ? 0.5 : 1 }}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        // UX §6 "soft colored outline, ~1.5s fade": appears instantly when a
+        // live update lands (useBoardLiveUpdates), then this transition
+        // fades it back out once that hook drops the id from its set.
+        boxShadow: isHighlighted ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
+        transition: 'box-shadow 1.5s ease-out',
+      }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="min-w-0 flex-1 break-words">{card.title}</span>
