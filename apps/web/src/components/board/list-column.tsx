@@ -61,6 +61,7 @@ export function ListColumn({
     <div
       ref={setElement}
       data-flip-id={list.id}
+      data-list-id={list.id}
       className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted p-2"
       style={{
         opacity: isDragging ? 0.5 : 1,

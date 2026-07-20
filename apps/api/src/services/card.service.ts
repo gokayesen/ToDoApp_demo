@@ -18,11 +18,11 @@ import { computePosition } from './position.service.js';
 
 // FR17: same MEMBER-minimum role gate and append-at-end positioning as
 // list.service.ts createList.
-export async function createCard(list: List, input: CreateCardRequest) {
+export async function createCard(list: List, input: CreateCardRequest, actorId: string) {
   const lastPosition = await findLastCardPosition(list.id);
   const position = computePosition(lastPosition, null);
   const card = await createCardForList(list.id, input.title, position);
-  emitCardCreated(list.boardId, card);
+  emitCardCreated(list.boardId, card, actorId);
   return card;
 }
 

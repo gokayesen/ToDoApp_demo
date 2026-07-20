@@ -24,11 +24,11 @@ import { computePosition } from './position.service.js';
 // always append at the end (computePosition against the last position and no
 // next neighbor) — the Story 3.5 reorder endpoint is what calls computePosition
 // with a live afterId/beforeId pair instead.
-export async function createList(board: Board, input: CreateListRequest) {
+export async function createList(board: Board, input: CreateListRequest, actorId: string) {
   const lastPosition = await findLastListPosition(board.id);
   const position = computePosition(lastPosition, null);
   const list = await createListForBoard(board.id, input.name, position);
-  emitListCreated(board.id, list);
+  emitListCreated(board.id, list, actorId);
   return list;
 }
 

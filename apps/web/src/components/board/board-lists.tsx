@@ -10,8 +10,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useBoardLiveUpdates } from '@/hooks/use-board-live-updates';
 import { useFlipAnimation } from '@/hooks/use-flip-animation';
+import { useOutOfViewToasts } from '@/hooks/use-out-of-view-toasts';
+import { usePresence } from '@/hooks/use-presence';
+import { useVisibleListIds } from '@/hooks/use-visible-list-ids';
 import { listCards, moveCard, moveList } from '@/lib/board-api';
 import { AddListForm } from './add-list-form';
+import { BoardToasts } from './board-toasts';
 import { ListColumn } from './list-column';
 
 const sensors = [
@@ -48,6 +52,9 @@ export function BoardLists({
   const highlightedIds = useBoardLiveUpdates(boardId, currentUserId);
 
   const flipContainerRef = useRef<HTMLDivElement>(null);
+  const visibleListIds = useVisibleListIds(flipContainerRef);
+  const presence = usePresence(boardId);
+  const { toasts, dismiss } = useOutOfViewToasts(currentUserId, visibleListIds, presence, orderedLists);
   const flipKey =
     orderedLists.map((list) => list.id).join(',') +
     '|' +
@@ -219,6 +226,7 @@ export function BoardLists({
         ))}
         <AddListForm boardId={boardId} />
       </DragDropProvider>
+      <BoardToasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

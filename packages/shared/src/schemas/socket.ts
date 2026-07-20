@@ -31,12 +31,14 @@ export type BoardAccessRevoked = z.infer<typeof boardAccessRevokedSchema>;
 // Story 5.3: broadcast to the board room after every List/Card mutation
 // commits (Architecture §6 event catalog). Payloads carry the full updated
 // entity — not just the changed field(s) — so a client cache merge (Story
-// 5.4) can upsert by id without a follow-up REST call. `created`/`updated`
-// carry no actor since nothing consumes that yet; `moved` does, matching the
-// architecture's `card:moved {..., movedBy}` example — knowing who moved
-// something is what lets the mover's own client skip re-animating its own
-// optimistic update.
-export const listCreatedEventSchema = z.object({ list: listSchema });
+// 5.4) can upsert by id without a follow-up REST call. `moved` carries
+// `movedBy`, matching the architecture's `card:moved {..., movedBy}`
+// example — knowing who moved something is what lets the mover's own
+// client skip re-animating its own optimistic update. `created` carries
+// `actorId` too (added for Story 5.7's out-of-view toast: "X added a card
+// to Y" needs to know who X is); `updated`/`deleted` still don't, since
+// nothing consumes an actor for those yet.
+export const listCreatedEventSchema = z.object({ list: listSchema, actorId: z.string().uuid() });
 export type ListCreatedEvent = z.infer<typeof listCreatedEventSchema>;
 
 export const listUpdatedEventSchema = z.object({ list: listSchema });
@@ -51,7 +53,7 @@ export const listDeletedEventSchema = z.object({
 });
 export type ListDeletedEvent = z.infer<typeof listDeletedEventSchema>;
 
-export const cardCreatedEventSchema = z.object({ card: cardSchema });
+export const cardCreatedEventSchema = z.object({ card: cardSchema, actorId: z.string().uuid() });
 export type CardCreatedEvent = z.infer<typeof cardCreatedEventSchema>;
 
 export const cardUpdatedEventSchema = z.object({ card: cardSchema });

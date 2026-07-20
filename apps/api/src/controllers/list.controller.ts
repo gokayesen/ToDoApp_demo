@@ -4,7 +4,7 @@ import { asyncHandler } from '../lib/async-handler.js';
 import * as listService from '../services/list.service.js';
 
 export const createListHandler = asyncHandler(async (req: Request, res: Response) => {
-  const list = await listService.createList(req.board!, req.body);
+  const list = await listService.createList(req.board!, req.body, req.userId!);
   res.status(201).json(list);
 });
 

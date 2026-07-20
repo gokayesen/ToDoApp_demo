@@ -15,8 +15,8 @@ function emit(boardId: string, event: string, payload: unknown): void {
   }
 }
 
-export function emitListCreated(boardId: string, list: List): void {
-  emit(boardId, 'list:created', { list });
+export function emitListCreated(boardId: string, list: List, actorId: string): void {
+  emit(boardId, 'list:created', { list, actorId });
 }
 
 export function emitListUpdated(boardId: string, list: List): void {
@@ -31,8 +31,8 @@ export function emitListDeleted(boardId: string, listId: string): void {
   emit(boardId, 'list:deleted', { listId, boardId });
 }
 
-export function emitCardCreated(boardId: string, card: Card): void {
-  emit(boardId, 'card:created', { card });
+export function emitCardCreated(boardId: string, card: Card, actorId: string): void {
+  emit(boardId, 'card:created', { card, actorId });
 }
 
 export function emitCardUpdated(boardId: string, card: Card): void {

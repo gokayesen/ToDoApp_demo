@@ -4,7 +4,7 @@ import { asyncHandler } from '../lib/async-handler.js';
 import * as cardService from '../services/card.service.js';
 
 export const createCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.createCard(req.list!, req.body);
+  const card = await cardService.createCard(req.list!, req.body, req.userId!);
   res.status(201).json(card);
 });
 
