@@ -5,13 +5,17 @@ import type {
   BoardMember,
   Card,
   CreateCardRequest,
+  CreateChecklistItemRequest,
+  CreateChecklistRequest,
   CreateLabelRequest,
   CreateListRequest,
   Label,
   List,
   MoveCardRequest,
+  MoveChecklistItemRequest,
   MoveListRequest,
   UpdateCardRequest,
+  UpdateChecklistItemRequest,
   UpdateLabelRequest,
 } from '@todoapp/shared';
 
@@ -114,4 +118,40 @@ export function assignCard(cardId: string, input: AssignCardRequest) {
 
 export function unassignCard(cardId: string, userId: string) {
   return apiFetch<Card>(`/cards/${cardId}/assignees/${userId}`, { method: 'DELETE' });
+}
+
+export function createChecklist(cardId: string, input: CreateChecklistRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/checklists`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteChecklist(checklistId: string) {
+  return apiFetch<Card>(`/checklists/${checklistId}`, { method: 'DELETE' });
+}
+
+export function createChecklistItem(checklistId: string, input: CreateChecklistItemRequest) {
+  return apiFetch<Card>(`/checklists/${checklistId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateChecklistItem(itemId: string, input: UpdateChecklistItemRequest) {
+  return apiFetch<Card>(`/checklist-items/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteChecklistItem(itemId: string) {
+  return apiFetch<Card>(`/checklist-items/${itemId}`, { method: 'DELETE' });
+}
+
+export function moveChecklistItem(itemId: string, input: MoveChecklistItemRequest) {
+  return apiFetch<Card>(`/checklist-items/${itemId}/move`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { checklistSchema } from './checklist.js';
 import { labelSchema } from './label.js';
 import { userProfileSchema } from './user.js';
 
@@ -66,12 +67,13 @@ export const cardSchema = z.object({
   dueDate: z.coerce.date().nullable(),
   isArchived: z.boolean(),
   archivedWithList: z.boolean(),
-  // Story 4.3 (FR24) / Story 4.5 (FR26): always present (possibly empty),
-  // never omitted — every backend Card query includes+flattens the CardLabel/
-  // CardAssignee joins so these fields are consistent whichever endpoint
-  // returned the Card (see card.repository.ts).
+  // Story 4.3 (FR24) / Story 4.5 (FR26) / Story 4.6 (FR27): always present
+  // (possibly empty), never omitted — every backend Card query includes+
+  // flattens the CardLabel/CardAssignee/Checklist joins so these fields are
+  // consistent whichever endpoint returned the Card (see card.repository.ts).
   labels: z.array(labelSchema),
   assignees: z.array(userProfileSchema),
+  checklists: z.array(checklistSchema),
 });
 
 export type Card = z.infer<typeof cardSchema>;

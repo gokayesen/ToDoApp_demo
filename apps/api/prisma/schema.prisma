@@ -203,11 +203,41 @@ model Card {
   // stays archived.
   archivedWithList Boolean @default(false)
 
-  list      List           @relation(fields: [listId], references: [id], onDelete: Cascade)
-  labels    CardLabel[]
-  assignees CardAssignee[]
+  list       List           @relation(fields: [listId], references: [id], onDelete: Cascade)
+  labels     CardLabel[]
+  assignees  CardAssignee[]
+  checklists Checklist[]
 
   @@index([listId])
+}
+
+// Story 4.6 (FR27): one or more per Card. position uses the same shared
+// fractional-index engine as List/Card (services/position.service.ts); new
+// Checklists append at the end, same as new Lists/Cards — no reorder-
+// checklist endpoint exists yet since the story only calls for reordering
+// items within a checklist, not the checklists themselves.
+model Checklist {
+  id       String @id @default(uuid()) @db.Uuid
+  cardId   String @db.Uuid
+  title    String
+  position Float
+
+  card  Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  items ChecklistItem[]
+
+  @@index([cardId])
+}
+
+model ChecklistItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  checklistId String  @db.Uuid
+  text        String
+  isChecked   Boolean @default(false)
+  position    Float
+
+  checklist Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
 }
 
 // Story 4.3 (FR24): per-board Label taxonomy (name + color, `color` a fixed

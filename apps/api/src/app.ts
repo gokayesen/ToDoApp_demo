@@ -7,6 +7,8 @@ import { passport } from './lib/passport.js';
 import { authRouter } from './routes/auth.js';
 import { boardsRouter } from './routes/boards.js';
 import { cardsRouter } from './routes/cards.js';
+import { checklistItemsRouter } from './routes/checklist-items.js';
+import { checklistsRouter } from './routes/checklists.js';
 import { healthRouter } from './routes/health.js';
 import { labelsRouter } from './routes/labels.js';
 import { listsRouter } from './routes/lists.js';
@@ -31,6 +33,8 @@ export function createApp() {
   app.use('/lists', listsRouter);
   app.use('/cards', cardsRouter);
   app.use('/labels', labelsRouter);
+  app.use('/checklists', checklistsRouter);
+  app.use('/checklist-items', checklistItemsRouter);
 
   app.use(errorHandler);
 

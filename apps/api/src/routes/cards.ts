@@ -1,6 +1,7 @@
 import {
   assignCardRequestSchema,
   attachCardLabelRequestSchema,
+  createChecklistRequestSchema,
   moveCardRequestSchema,
   updateCardRequestSchema,
 } from '@todoapp/shared';
@@ -17,6 +18,7 @@ import {
   unassignUserHandler,
   updateCardHandler,
 } from '../controllers/card.controller.js';
+import { createChecklistHandler } from '../controllers/checklist.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadCardContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -65,3 +67,15 @@ cardsRouter.post(
   assignUserHandler,
 );
 cardsRouter.delete('/:cardId/assignees/:userId', requireRole('MEMBER'), unassignUserHandler);
+
+// FR27: create a Checklist on this Card. Same nested-under-parent convention
+// as List creation under /boards/:boardId/lists — item-level mutations and
+// checklist deletion live under /checklists and /checklist-items instead
+// (routes/checklists.ts, routes/checklist-items.ts), same split labels.ts
+// uses for Label rename/delete vs. attach/detach here.
+cardsRouter.post(
+  '/:cardId/checklists',
+  requireRole('MEMBER'),
+  validateBody(createChecklistRequestSchema),
+  createChecklistHandler,
+);

@@ -3,6 +3,8 @@ import type { NextFunction, Request, Response } from 'express';
 import { asyncHandler } from '../lib/async-handler.js';
 import { findBoardById } from '../repositories/board.repository.js';
 import { findCardById } from '../repositories/card.repository.js';
+import { findChecklistItemById } from '../repositories/checklist-item.repository.js';
+import { findChecklistById } from '../repositories/checklist.repository.js';
 import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
 import { resolveBoardRole } from '../services/board-role.service.js';
@@ -89,6 +91,98 @@ export const loadCardContext = asyncHandler(
       return;
     }
 
+    req.card = card;
+    req.list = list;
+    req.board = board;
+    req.boardRole = role;
+    next();
+  },
+);
+
+// Checklist routes carry a :checklistId param — context resolves through its
+// owning Card up to Board, same one-level-deeper idea as loadCardContext.
+export const loadChecklistContext = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const checklist = await findChecklistById(req.params.checklistId!);
+    if (!checklist) {
+      res.status(404).json({ error: 'Checklist not found' });
+      return;
+    }
+
+    const card = await findCardById(checklist.cardId);
+    if (!card) {
+      res.status(404).json({ error: 'Card not found' });
+      return;
+    }
+
+    const list = await findListById(card.listId);
+    if (!list) {
+      res.status(404).json({ error: 'List not found' });
+      return;
+    }
+
+    const board = await findBoardById(list.boardId);
+    if (!board) {
+      res.status(404).json({ error: 'Board not found' });
+      return;
+    }
+
+    const role = await resolveBoardRole(board, req.userId!);
+    if (!role) {
+      res.status(403).json({ error: 'You do not have access to this board' });
+      return;
+    }
+
+    req.checklist = checklist;
+    req.card = card;
+    req.list = list;
+    req.board = board;
+    req.boardRole = role;
+    next();
+  },
+);
+
+// Same idea one level deeper still: ChecklistItem -> Checklist -> Card -> List -> Board.
+export const loadChecklistItemContext = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const item = await findChecklistItemById(req.params.itemId!);
+    if (!item) {
+      res.status(404).json({ error: 'Checklist item not found' });
+      return;
+    }
+
+    const checklist = await findChecklistById(item.checklistId);
+    if (!checklist) {
+      res.status(404).json({ error: 'Checklist not found' });
+      return;
+    }
+
+    const card = await findCardById(checklist.cardId);
+    if (!card) {
+      res.status(404).json({ error: 'Card not found' });
+      return;
+    }
+
+    const list = await findListById(card.listId);
+    if (!list) {
+      res.status(404).json({ error: 'List not found' });
+      return;
+    }
+
+    const board = await findBoardById(list.boardId);
+    if (!board) {
+      res.status(404).json({ error: 'Board not found' });
+      return;
+    }
+
+    const role = await resolveBoardRole(board, req.userId!);
+    if (!role) {
+      res.status(403).json({ error: 'You do not have access to this board' });
+      return;
+    }
+
+    req.checklistItem = item;
+    req.checklist = checklist;
     req.card = card;
     req.list = list;
     req.board = board;
