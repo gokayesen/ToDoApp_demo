@@ -14,6 +14,7 @@ import { commentsRouter } from './routes/comments.js';
 import { healthRouter } from './routes/health.js';
 import { labelsRouter } from './routes/labels.js';
 import { listsRouter } from './routes/lists.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { usersRouter } from './routes/users.js';
 import { workspacesRouter } from './routes/workspaces.js';
 
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/checklist-items', checklistItemsRouter);
   app.use('/comments', commentsRouter);
   app.use('/attachments', attachmentsRouter);
+  app.use('/notifications', notificationsRouter);
 
   app.use(errorHandler);
 

@@ -1,6 +1,6 @@
-// Prisma schema — auth/workspace/board containers (Epic 1-2) plus List/Card
-// (Epic 3). Label/Checklist/Comment/Attachment/ActivityLog/Notification models
-// are added in later epics (4, 6) per Epics-and-Stories.md.
+// Prisma schema — auth/workspace/board containers (Epic 1-2), List/Card
+// (Epic 3), Label/Checklist/Comment/Attachment/ActivityLog (Epic 4), and
+// Notification/NotificationPreference (Epic 6) per Epics-and-Stories.md.
 // Cascade behavior follows Architecture.md §4 "Referential Integrity & Cascade Strategy".
 
 generator client {
@@ -31,18 +31,20 @@ model User {
   avatarUrl    String?
   createdAt    DateTime @default(now())
 
-  oauthAccounts        OAuthAccount[]
-  refreshTokens        RefreshToken[]
-  passwordResetTokens  PasswordResetToken[]
-  ownedWorkspaces      Workspace[]          @relation("WorkspaceOwner")
-  workspaceMemberships WorkspaceMember[]
-  boardMemberships     BoardMember[]
-  sentWorkspaceInvites WorkspaceInvite[]    @relation("WorkspaceInviteSender")
-  sentBoardInvites     BoardInvite[]        @relation("BoardInviteSender")
-  cardAssignments      CardAssignee[]
-  comments             Comment[]
-  attachments          Attachment[]
-  activityLogEntries   ActivityLog[]
+  oauthAccounts           OAuthAccount[]
+  refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
+  ownedWorkspaces         Workspace[]              @relation("WorkspaceOwner")
+  workspaceMemberships    WorkspaceMember[]
+  boardMemberships        BoardMember[]
+  sentWorkspaceInvites    WorkspaceInvite[]        @relation("WorkspaceInviteSender")
+  sentBoardInvites        BoardInvite[]            @relation("BoardInviteSender")
+  cardAssignments         CardAssignee[]
+  comments                Comment[]
+  attachments             Attachment[]
+  activityLogEntries      ActivityLog[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 }
 
 model OAuthAccount {
@@ -379,4 +381,46 @@ model CardAssignee {
 
   @@id([cardId, userId])
   @@index([userId])
+}
+
+// Story 6.1 (FR34/FR36): in-app notifications for a recipient User. `type` is
+// a plain string (not a Zod enum like ActivityLog.type) because no story
+// writes a Notification row yet — the concrete trigger set (assignment,
+// @mention, due-date sweep, board/workspace add) is Story 6.3's job, and
+// enumerating values with zero producers here would be speculative. `payload`
+// is freeform JSON shaped per type, same "string key + JSON payload"
+// convention as ActivityLog.metadata. Cascades on User delete (not SetNull)
+// per Architecture §4's cascade table rationale for RefreshToken/
+// PasswordResetToken: "purely personal, never shared with other users" — a
+// notification only exists for its one recipient, unlike Comment/ActivityLog
+// which are shared board history.
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  type      String
+  payload   Json
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Story 6.1 (FR35/FR36 preface, consumed by Story 6.6's settings screen):
+// per-(user, eventType) email/in-app opt-out. No row for a given eventType
+// means "defaults enabled" (both flags default true) — rows are only
+// materialized when a user actually changes a preference away from the
+// default, so this table starts empty and Story 6.3/6.5's senders must treat
+// a missing row as enabled rather than requiring one to pre-exist.
+model NotificationPreference {
+  id           String  @id @default(uuid()) @db.Uuid
+  userId       String  @db.Uuid
+  eventType    String
+  emailEnabled Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventType])
 }

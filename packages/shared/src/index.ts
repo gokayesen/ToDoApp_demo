@@ -6,6 +6,7 @@ export * from './schemas/checklist.js';
 export * from './schemas/comment.js';
 export * from './schemas/label.js';
 export * from './schemas/list.js';
+export * from './schemas/notification.js';
 export * from './schemas/socket.js';
 export * from './schemas/user.js';
 export * from './schemas/workspace.js';
