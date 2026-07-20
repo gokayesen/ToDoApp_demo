@@ -1,4 +1,4 @@
-import type { UpdateNotificationPreferenceRequest } from '@todoapp/shared';
+import type { NotificationEventType, UpdateNotificationPreferenceRequest } from '@todoapp/shared';
 
 import { sendNotificationEmail } from '../lib/email.js';
 import { HttpError } from '../lib/http-error.js';
@@ -18,20 +18,14 @@ export function listNotifications(userId: string) {
   return findNotificationsByUser(userId);
 }
 
-// Story 6.3 (FR34) / Story 6.4: the six triggers wired up so far. `type`
-// doubles as the NotificationPreference `eventType` key (Story 6.1) — a user
-// who has turned inAppEnabled off for one of these skips row creation
-// entirely rather than being written and hidden, since there's no
-// unread-but-suppressed concept anywhere else in the app. A missing
-// preference row means both flags are enabled, same "defaults enabled"
-// contract Story 6.1 established.
-export type NotificationEventType =
-  | 'card.assigned'
-  | 'comment.mention'
-  | 'workspace.added'
-  | 'board.added'
-  | 'card.due_soon'
-  | 'card.overdue';
+// Story 6.3 (FR34) / Story 6.4: the six triggers wired up so far, typed via
+// packages/shared's notificationEventTypeSchema (Story 6.6 formalized the
+// enum there once a canonical list was needed). `type` doubles as the
+// NotificationPreference `eventType` key (Story 6.1) — a user who has turned
+// inAppEnabled off for one of these skips row creation entirely rather than
+// being written and hidden, since there's no unread-but-suppressed concept
+// anywhere else in the app. A missing preference row means both flags are
+// enabled, same "defaults enabled" contract Story 6.1 established.
 
 // Story 6.5 (FR35): subject/heading/CTA copy per event type — the body
 // itself is always just payload.message (already a complete human-readable

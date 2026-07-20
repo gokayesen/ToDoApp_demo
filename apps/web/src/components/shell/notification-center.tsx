@@ -18,13 +18,13 @@ import { Button } from '@/components/ui/button';
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
 
-// No producer writes a Notification row yet (Story 6.3's job) — payload is
-// freeform JSON (packages/shared's notificationSchema), so this reads two
-// conventions this story establishes for whatever Story 6.3 will populate:
-// `payload.message` as the human-readable line (falling back to a generic
-// one) and `payload.boardId` as the click-through target. There's no
-// mechanism yet to deep-link straight into a Card (board-lists.tsx has no
-// open-by-id query param), so click-through only goes as far as the Board.
+// payload is freeform JSON (packages/shared's notificationSchema); this
+// reads the two conventions this story established and Story 6.3/6.4's
+// triggers now populate: `payload.message` as the human-readable line
+// (falling back to a generic one) and `payload.boardId` as the click-through
+// target. There's no mechanism yet to deep-link straight into a Card
+// (board-lists.tsx has no open-by-id query param), so click-through only
+// goes as far as the Board.
 function describeNotification(notification: Notification): string {
   const message = (notification.payload as Record<string, unknown>).message;
   return typeof message === 'string' && message.length > 0 ? message : 'New notification';
@@ -192,10 +192,15 @@ export function NotificationCenter() {
             </div>
           )}
 
-          {/* Story 6.6 builds the per-event email preference settings screen
-              this links to — same inert-stub convention top-bar.tsx already
-              uses for features whose home doesn't exist yet. */}
-          <Button variant="ghost" size="sm" disabled className="mt-auto self-start" title="Coming soon">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-auto self-start"
+            onClick={() => {
+              setOpen(false);
+              router.push('/settings/notifications');
+            }}
+          >
             Notification settings
           </Button>
         </DialogPrimitive.Popup>
