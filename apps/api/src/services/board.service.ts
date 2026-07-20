@@ -140,8 +140,10 @@ async function assertNotWorkspaceOwner(board: Board, targetUserId: string): Prom
 }
 
 // FR10: requireRole('ADMIN') on the route already confirms the caller is a
-// Board Admin. A downgrade triggers the Architecture §6 eviction flow (stubbed
-// until Story 5.1's Socket.io gateway exists — see sockets/board-access.ts).
+// Board Admin. A downgrade triggers the Architecture §6 eviction flow
+// (sockets/board-access.ts) — fire-and-forget with its own error log rather
+// than awaited, so a Redis/socket hiccup there can't fail a REST response
+// for a role change that already committed successfully.
 export async function changeBoardMemberRole(
   board: Board,
   targetUserId: string,
@@ -155,7 +157,9 @@ export async function changeBoardMemberRole(
   const updated = await updateBoardMemberRole(board.id, targetUserId, input.role);
 
   if (ROLE_RANK[input.role] < ROLE_RANK[membership.role]) {
-    emitBoardAccessRevoked(board.id, targetUserId);
+    emitBoardAccessRevoked(board.id, targetUserId).catch((error: unknown) => {
+      console.error('Failed to evict downgraded board member', error);
+    });
   }
 
   return updated;
@@ -168,7 +172,9 @@ export async function removeBoardMember(board: Board, targetUserId: string) {
   if (!membership) throw new HttpError(404, 'This user is not a member of the board');
 
   await removeBoardMemberRow(board.id, targetUserId);
-  emitBoardAccessRevoked(board.id, targetUserId);
+  emitBoardAccessRevoked(board.id, targetUserId, { fullyDisconnect: true }).catch((error: unknown) => {
+    console.error('Failed to evict removed board member', error);
+  });
 }
 
 // FR11: archive/restore is Board-Admin-only, same grouping as archive/delete

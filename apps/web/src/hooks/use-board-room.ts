@@ -6,10 +6,10 @@ import { getSocket } from '@/lib/socket-client';
 
 // Story 5.1: join/leave room `board:{boardId}` on mount/unmount, with
 // server-side role re-validation on every join (Architecture §6 — a client
-// can't just claim access to a board by knowing its id). Nothing subscribes
-// to a broadcast yet (Story 5.3) and there's no presence UI yet (Story 5.2)
-// — this hook only establishes the room membership those later stories
-// build on, so there's nothing user-visible to show for it yet.
+// can't just claim access to a board by knowing its id). This hook only
+// establishes room membership; usePresence (Story 5.2) reads the live member
+// list that produces, and card/list broadcasts (Story 5.3) aren't consumed
+// yet.
 export function useBoardRoom(boardId: string): void {
   useEffect(() => {
     const socket = getSocket();

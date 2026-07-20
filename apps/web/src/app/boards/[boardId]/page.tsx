@@ -8,8 +8,10 @@ import { useAuth } from '@/lib/auth-context';
 import { getBoard, listLists } from '@/lib/board-api';
 import { recordBoardVisit } from '@/lib/recent-boards';
 import { useBoardRoom } from '@/hooks/use-board-room';
+import { usePresence } from '@/hooks/use-presence';
 import { AppShell } from '@/components/shell/app-shell';
 import { BoardLists } from '@/components/board/board-lists';
+import { PresenceAvatars } from '@/components/board/presence-avatars';
 
 const FALLBACK_BACKGROUND = 'var(--muted)';
 
@@ -47,9 +49,10 @@ export default function BoardViewPage() {
   }, [board]);
 
   // Story 5.1: join the board's realtime room while this page is open.
-  // Nothing consumes a broadcast yet (Story 5.3) or shows presence (Story
-  // 5.2) — this just establishes membership those stories build on.
+  // Story 5.2 adds the live presence avatar stack below; card/list broadcasts
+  // (Story 5.3) still aren't consumed by the client yet.
   useBoardRoom(boardId);
+  const presence = usePresence(boardId);
 
   if (loading || !user) return null;
 
@@ -63,10 +66,11 @@ export default function BoardViewPage() {
   return (
     <AppShell user={user}>
       <div className="flex h-full flex-col" style={backgroundStyle}>
-        <header className="px-6 py-4">
+        <header className="flex items-center justify-between gap-4 px-6 py-4">
           <h1 className="truncate text-lg font-semibold text-foreground drop-shadow-sm">
             {boardLoading ? 'Loading…' : board?.name}
           </h1>
+          <PresenceAvatars members={presence} />
         </header>
         <div className="flex flex-1 items-start gap-3 overflow-x-auto px-6 pb-6">
           {listsLoading ? (

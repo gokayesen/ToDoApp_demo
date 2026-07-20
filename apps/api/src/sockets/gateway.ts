@@ -6,13 +6,22 @@ import { verifyAccessToken } from '../lib/jwt.js';
 import { redis } from '../lib/redis.js';
 import { findBoardById } from '../repositories/board.repository.js';
 import { resolveBoardRole } from '../services/board-role.service.js';
+import { listPresence, markAbsent, markPresent, refreshPresenceHeartbeat } from '../services/presence.service.js';
 
 // The fourth Server/Socket generic (SocketData) is how socket.io types
 // per-connection state — `declare module` augmentation of Socket.data
 // conflicts with its own built-in declaration, this is the supported path.
 interface SocketData {
   userId: string;
+  // Boards this socket currently holds a `board:join`. Needed on disconnect
+  // to clean up presence for every room the socket was in, since disconnect
+  // only gives us the socket, not which rooms it had joined at the app level.
+  joinedBoards: Set<string>;
 }
+
+// Well under the presence heartbeat's own TTL (presence.service.ts) so a
+// connection's entry never lapses while it's still alive.
+const PRESENCE_HEARTBEAT_INTERVAL_MS = 20_000;
 
 type GatewayServer = Server<Record<string, never>, Record<string, never>, Record<string, never>, SocketData>;
 
@@ -35,8 +44,8 @@ type JoinAck = (result: { ok: boolean; error?: string }) => void;
 
 // Story 5.1: handshake auth, connection middleware, board:join/leave with
 // server-side role re-validation, Redis adapter for horizontal scale-out.
-// Presence writes (Story 5.2) and the mutation broadcast pipeline (Story 5.3)
-// build on top of this, not here.
+// Story 5.2 added the presence writes/broadcasts below. The mutation
+// broadcast pipeline (Story 5.3) still builds on top of this, not here.
 export function createSocketGateway(httpServer: HttpServer): GatewayServer {
   io = new Server(httpServer, {
     cors: { origin: process.env.CORS_ORIGIN, credentials: true },
@@ -68,6 +77,21 @@ export function createSocketGateway(httpServer: HttpServer): GatewayServer {
   });
 
   io.on('connection', (socket) => {
+    socket.data.joinedBoards = new Set();
+
+    // A no-op EXPIRE on a not-yet-set key costs nothing, so this runs
+    // unconditionally rather than tracking per-board timers.
+    const heartbeat = setInterval(() => {
+      void refreshPresenceHeartbeat(socket.id);
+    }, PRESENCE_HEARTBEAT_INTERVAL_MS);
+
+    async function broadcastPresence(boardId: string) {
+      getIO().to(boardRoom(boardId)).emit('presence:update', {
+        boardId,
+        members: await listPresence(boardId),
+      });
+    }
+
     socket.on('board:join', async (boardId: unknown, ack?: JoinAck) => {
       if (typeof boardId !== 'string') {
         ack?.({ ok: false, error: 'boardId must be a string' });
@@ -90,11 +114,30 @@ export function createSocketGateway(httpServer: HttpServer): GatewayServer {
       }
 
       socket.join(boardRoom(boardId));
+      socket.data.joinedBoards.add(boardId);
+      await markPresent(boardId, socket.id, socket.data.userId);
       ack?.({ ok: true });
+      await broadcastPresence(boardId);
     });
 
-    socket.on('board:leave', (boardId: unknown) => {
-      if (typeof boardId === 'string') socket.leave(boardRoom(boardId));
+    socket.on('board:leave', async (boardId: unknown) => {
+      if (typeof boardId !== 'string') return;
+
+      socket.leave(boardRoom(boardId));
+      socket.data.joinedBoards.delete(boardId);
+      await markAbsent(boardId, socket.id);
+      await broadcastPresence(boardId);
+    });
+
+    socket.on('disconnect', () => {
+      clearInterval(heartbeat);
+      const boardIds = [...socket.data.joinedBoards];
+      void Promise.all(
+        boardIds.map(async (boardId) => {
+          await markAbsent(boardId, socket.id);
+          await broadcastPresence(boardId);
+        }),
+      );
     });
   });
 
