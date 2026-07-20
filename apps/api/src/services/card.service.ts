@@ -34,6 +34,7 @@ import {
   emitCardUpdated,
 } from '../sockets/broadcast.js';
 import { logActivity } from './activity-log.service.js';
+import { notifyUser } from './notification.service.js';
 import { computePosition } from './position.service.js';
 
 function dateChanged(before: Date | null, after: Date | null | undefined): boolean {
@@ -296,6 +297,16 @@ export async function assignUser(
     type: 'assignee.added',
     metadata: { userName: assignee!.name },
   });
+
+  // FR34: skip self-assignment — notifying someone about their own action
+  // isn't useful.
+  if (input.userId !== actorId) {
+    const actor = await findUserById(actorId);
+    await notifyUser(input.userId, 'card.assigned', {
+      message: `${actor!.name} assigned you to "${card.title}"`,
+      boardId,
+    });
+  }
 
   const updated = await findCardById(card.id);
   emitCardUpdated(boardId, updated!);

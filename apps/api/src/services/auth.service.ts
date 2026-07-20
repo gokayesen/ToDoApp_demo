@@ -16,6 +16,7 @@ import {
   refreshTokenExpiry,
 } from '../lib/refresh-token.js';
 import { generateRawResetToken, hashResetToken, resetTokenExpiry } from '../lib/reset-token.js';
+import { findBoardById } from '../repositories/board.repository.js';
 import {
   findPendingBoardInvitesByEmail,
   markBoardInviteAccepted,
@@ -45,6 +46,8 @@ import {
   markWorkspaceInviteAccepted,
 } from '../repositories/workspace-invite.repository.js';
 import { addWorkspaceMember } from '../repositories/workspace-member.repository.js';
+import { findWorkspaceById } from '../repositories/workspace.repository.js';
+import { notifyUser } from './notification.service.js';
 
 export interface Session {
   user: User;
@@ -94,12 +97,29 @@ async function resolvePendingInvites(userId: string, email: string): Promise<voi
   for (const invite of pendingWorkspaceInvites) {
     await addWorkspaceMember(invite.workspaceId, userId);
     await markWorkspaceInviteAccepted(invite.id);
+    // FR34: same "added to a workspace/board" trigger as workspace.service.ts
+    // inviteMember's immediate-add branch, just reached via the other path
+    // Story 2.3 built — an invite that resolves the moment registration
+    // completes, rather than an existing account being added directly.
+    const workspace = await findWorkspaceById(invite.workspaceId);
+    if (workspace) {
+      await notifyUser(userId, 'workspace.added', {
+        message: `You were added to the workspace "${workspace.name}"`,
+      });
+    }
   }
 
   const pendingBoardInvites = await findPendingBoardInvitesByEmail(email);
   for (const invite of pendingBoardInvites) {
     await addBoardMember(invite.boardId, userId, invite.role);
     await markBoardInviteAccepted(invite.id);
+    const board = await findBoardById(invite.boardId);
+    if (board) {
+      await notifyUser(userId, 'board.added', {
+        message: `You were added to the board "${board.name}"`,
+        boardId: board.id,
+      });
+    }
   }
 }
 

@@ -14,6 +14,7 @@ import {
   findWorkspaceById,
   listWorkspacesForUser,
 } from '../repositories/workspace.repository.js';
+import { notifyUser } from './notification.service.js';
 
 export function createWorkspace(userId: string, input: CreateWorkspaceRequest) {
   return createWorkspaceWithOwner(input.name, userId);
@@ -48,6 +49,13 @@ export async function inviteMember(
 
     await addWorkspaceMember(workspaceId, existingUser.id);
     await sendWorkspaceMemberAddedEmail(existingUser.email, workspace.name);
+    // FR34: no boardId — a Workspace has no dedicated page of its own to
+    // click through to (the Dashboard groups boards by workspace, but isn't
+    // itself addressed by workspaceId), so this notification is mark-as-read
+    // only, same as any other Notification whose payload omits boardId.
+    await notifyUser(existingUser.id, 'workspace.added', {
+      message: `You were added to the workspace "${workspace.name}"`,
+    });
     return { status: 'added' as const };
   }
 

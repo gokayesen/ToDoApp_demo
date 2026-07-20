@@ -31,6 +31,7 @@ import { findWorkspaceMember } from '../repositories/workspace-member.repository
 import { findWorkspaceById } from '../repositories/workspace.repository.js';
 import { ROLE_RANK } from '../middleware/require-role.js';
 import { emitBoardAccessRevoked } from '../sockets/board-access.js';
+import { notifyUser } from './notification.service.js';
 
 // FR8: any Workspace member (Owner or Member) can create a Board. A Workspace
 // Owner already gets implicit Board Admin per Architecture §7.4, so no explicit
@@ -117,6 +118,10 @@ export async function inviteBoardMember(
 
     await addBoardMember(board.id, existingUser.id, input.role);
     await sendBoardMemberAddedEmail(existingUser.email, board.name);
+    await notifyUser(existingUser.id, 'board.added', {
+      message: `You were added to the board "${board.name}"`,
+      boardId: board.id,
+    });
     return { status: 'added' as const };
   }
 
