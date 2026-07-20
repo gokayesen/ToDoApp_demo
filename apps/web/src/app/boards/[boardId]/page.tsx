@@ -76,7 +76,12 @@ export default function BoardViewPage() {
           {listsLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
-            <BoardLists boardId={boardId} lists={lists ?? []} currentUserId={user.id} />
+            <BoardLists
+              boardId={boardId}
+              boardName={board?.name ?? ''}
+              lists={lists ?? []}
+              currentUserId={user.id}
+            />
           )}
         </div>
       </div>

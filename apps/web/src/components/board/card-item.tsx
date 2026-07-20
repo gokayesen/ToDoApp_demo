@@ -28,6 +28,7 @@ export function CardItem({
   listId,
   otherLists,
   onMoveToList,
+  onOpen,
   isHighlighted,
 }: {
   card: Card;
@@ -35,6 +36,7 @@ export function CardItem({
   listId: string;
   otherLists: List[];
   onMoveToList: (cardId: string, targetListId: string) => void;
+  onOpen: (cardId: string) => void;
   isHighlighted: boolean;
 }) {
   const { ref, isDragging } = useSortable({
@@ -57,6 +59,13 @@ export function CardItem({
       ref={ref}
       data-flip-id={card.id}
       tabIndex={0}
+      onClick={() => onOpen(card.id)}
+      onKeyDown={(event) => {
+        // Space is reserved for dnd-kit's keyboard drag pick-up (see comment
+        // above); Enter opens the Card Detail instead, mirroring the
+        // click-to-open mouse behavior.
+        if (event.key === 'Enter') onOpen(card.id);
+      }}
       className="group flex cursor-grab flex-col gap-1 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-sm outline-none ring-1 ring-foreground/10 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
       style={{
         opacity: isDragging ? 0.5 : 1,
@@ -70,21 +79,25 @@ export function CardItem({
       <div className="flex items-start justify-between gap-1">
         <span className="min-w-0 flex-1 break-words">{card.title}</span>
         {otherLists.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
-              aria-label="Move to list"
-            >
-              <MoveIcon className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {otherLists.map((list) => (
-                <DropdownMenuItem key={list.id} onClick={() => onMoveToList(card.id, list.id)}>
-                  {list.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          // Stops the click from bubbling to the outer div's onOpen — the
+          // menu is its own affordance, not an entry point into Card Detail.
+          <div onClick={(event) => event.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+                aria-label="Move to list"
+              >
+                <MoveIcon className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {otherLists.map((list) => (
+                  <DropdownMenuItem key={list.id} onClick={() => onMoveToList(card.id, list.id)}>
+                    {list.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
       {/* FR23 card face preview: due date is the only piece of this preview

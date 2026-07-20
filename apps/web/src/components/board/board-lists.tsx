@@ -16,6 +16,7 @@ import { useVisibleListIds } from '@/hooks/use-visible-list-ids';
 import { listCards, moveCard, moveList } from '@/lib/board-api';
 import { AddListForm } from './add-list-form';
 import { BoardToasts } from './board-toasts';
+import { CardDetail } from './card-detail';
 import { ListColumn } from './list-column';
 
 const sensors = [
@@ -38,16 +39,19 @@ type CardsByList = Record<string, Card[]>;
 // entirely by React state instead, live, via `onDragOver`.
 export function BoardLists({
   boardId,
+  boardName,
   lists,
   currentUserId,
 }: {
   boardId: string;
+  boardName: string;
   lists: List[];
   currentUserId: string;
 }) {
   const [orderedLists, setOrderedLists] = useState(lists);
   const [cardsByList, setCardsByList] = useState<CardsByList>({});
   const [isDragging, setIsDragging] = useState(false);
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const highlightedIds = useBoardLiveUpdates(boardId, currentUserId);
 
@@ -197,6 +201,12 @@ export function BoardLists({
     moveCardMutation.mutate({ cardId, listId: targetListId, afterCardId, beforeCardId: null });
   }
 
+  const openCardEntry = openCardId
+    ? Object.entries(cardsByList).find(([, cards]) => cards.some((card) => card.id === openCardId))
+    : undefined;
+  const openCard = openCardEntry?.[1].find((card) => card.id === openCardId) ?? null;
+  const openCardList = openCardEntry ? (orderedLists.find((list) => list.id === openCardEntry[0]) ?? null) : null;
+
   return (
     // `contents` keeps this a transparent pass-through in the parent's flex
     // layout (board page's list row) while still giving use-flip-animation a
@@ -221,12 +231,22 @@ export function BoardLists({
             isLoading={cardsLoading}
             otherLists={orderedLists.filter((l) => l.id !== list.id)}
             onMoveToList={handleMoveToList}
+            onOpenCard={setOpenCardId}
             highlightedIds={highlightedIds}
           />
         ))}
         <AddListForm boardId={boardId} />
       </DragDropProvider>
       <BoardToasts toasts={toasts} onDismiss={dismiss} />
+      <CardDetail
+        card={openCard}
+        list={openCardList}
+        boardName={boardName}
+        open={openCardId !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenCardId(null);
+        }}
+      />
     </div>
   );
 }
