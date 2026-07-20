@@ -15,6 +15,7 @@ import { healthRouter } from './routes/health.js';
 import { labelsRouter } from './routes/labels.js';
 import { listsRouter } from './routes/lists.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { searchRouter } from './routes/search.js';
 import { usersRouter } from './routes/users.js';
 import { workspacesRouter } from './routes/workspaces.js';
 
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/comments', commentsRouter);
   app.use('/attachments', attachmentsRouter);
   app.use('/notifications', notificationsRouter);
+  app.use('/search', searchRouter);
 
   app.use(errorHandler);
 
