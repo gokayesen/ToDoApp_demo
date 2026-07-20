@@ -58,11 +58,18 @@ export function BoardLists({
   const flipContainerRef = useRef<HTMLDivElement>(null);
   const visibleListIds = useVisibleListIds(flipContainerRef);
   const presence = usePresence(boardId);
-  const { toasts, dismiss } = useOutOfViewToasts(currentUserId, visibleListIds, presence, orderedLists);
+  const { toasts, dismiss } = useOutOfViewToasts(
+    currentUserId,
+    visibleListIds,
+    presence,
+    orderedLists,
+  );
   const flipKey =
     orderedLists.map((list) => list.id).join(',') +
     '|' +
-    orderedLists.map((list) => (cardsByList[list.id] ?? []).map((card) => card.id).join(',')).join(';');
+    orderedLists
+      .map((list) => (cardsByList[list.id] ?? []).map((card) => card.id).join(','))
+      .join(';');
   // Skip animating this client's own active drag — dnd-kit already gives
   // that its own live per-frame transform (use-flip-animation.ts).
   useFlipAnimation(flipContainerRef, flipKey, !isDragging);
@@ -97,7 +104,11 @@ export function BoardLists({
   }, [lists, cardsVersion]);
 
   const moveListMutation = useMutation({
-    mutationFn: (input: { listId: string; afterListId: string | null; beforeListId: string | null }) =>
+    mutationFn: (input: {
+      listId: string;
+      afterListId: string | null;
+      beforeListId: string | null;
+    }) =>
       moveList(input.listId, { afterListId: input.afterListId, beforeListId: input.beforeListId }),
     onError: () => {
       setOrderedLists(lists);
@@ -109,7 +120,12 @@ export function BoardLists({
   });
 
   const moveCardMutation = useMutation({
-    mutationFn: (input: { cardId: string; listId: string; afterCardId: string | null; beforeCardId: string | null }) =>
+    mutationFn: (input: {
+      cardId: string;
+      listId: string;
+      afterCardId: string | null;
+      beforeCardId: string | null;
+    }) =>
       moveCard(input.cardId, {
         listId: input.listId,
         afterCardId: input.afterCardId,
@@ -174,7 +190,12 @@ export function BoardLists({
 
       const afterCardId = targetCards[movedIndex - 1]?.id ?? null;
       const beforeCardId = targetCards[movedIndex + 1]?.id ?? null;
-      moveCardMutation.mutate({ cardId: String(movedId), listId: targetListId, afterCardId, beforeCardId });
+      moveCardMutation.mutate({
+        cardId: String(movedId),
+        listId: targetListId,
+        afterCardId,
+        beforeCardId,
+      });
     }
   }
 
@@ -205,7 +226,9 @@ export function BoardLists({
     ? Object.entries(cardsByList).find(([, cards]) => cards.some((card) => card.id === openCardId))
     : undefined;
   const openCard = openCardEntry?.[1].find((card) => card.id === openCardId) ?? null;
-  const openCardList = openCardEntry ? (orderedLists.find((list) => list.id === openCardEntry[0]) ?? null) : null;
+  const openCardList = openCardEntry
+    ? (orderedLists.find((list) => list.id === openCardEntry[0]) ?? null)
+    : null;
 
   return (
     // `contents` keeps this a transparent pass-through in the parent's flex
@@ -243,6 +266,7 @@ export function BoardLists({
         list={openCardList}
         boardId={boardId}
         boardName={boardName}
+        currentUserId={currentUserId}
         open={openCardId !== null}
         onOpenChange={(next) => {
           if (!next) setOpenCardId(null);

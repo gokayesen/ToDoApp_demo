@@ -17,10 +17,15 @@ import { useEffect, useRef, useState } from 'react';
 
 import { getSocket } from '@/lib/socket-client';
 
-const HIGHLIGHT_MS = 1500;
+// Exported so card-detail.tsx (Story 5.5) can flash its own per-field
+// highlight for the same duration, matching UX §6's "same brief highlight
+// treatment" wording for live edits inside an open Card Detail.
+export const HIGHLIGHT_MS = 1500;
 
 function upsertSorted<T extends { id: string; position: number }>(list: T[], entity: T): T[] {
-  return [...list.filter((item) => item.id !== entity.id), entity].sort((a, b) => a.position - b.position);
+  return [...list.filter((item) => item.id !== entity.id), entity].sort(
+    (a, b) => a.position - b.position,
+  );
 }
 
 // Story 5.4: merges Story 5.3's broadcast events straight into the TanStack
@@ -75,7 +80,9 @@ export function useBoardLiveUpdates(boardId: string, currentUserId: string): Set
     function onListUpdated({ list }: ListUpdatedEvent) {
       queryClient.setQueryData<List[]>(['lists', boardId], (current) => {
         if (!current) return current;
-        return list.isArchived ? current.filter((l) => l.id !== list.id) : upsertSorted(current, list);
+        return list.isArchived
+          ? current.filter((l) => l.id !== list.id)
+          : upsertSorted(current, list);
       });
       highlight(list.id);
     }
@@ -88,7 +95,9 @@ export function useBoardLiveUpdates(boardId: string, currentUserId: string): Set
     }
 
     function onListDeleted({ listId }: ListDeletedEvent) {
-      queryClient.setQueryData<List[]>(['lists', boardId], (current) => current?.filter((l) => l.id !== listId));
+      queryClient.setQueryData<List[]>(['lists', boardId], (current) =>
+        current?.filter((l) => l.id !== listId),
+      );
     }
 
     function onCardCreated({ card }: CardCreatedEvent) {
@@ -101,7 +110,9 @@ export function useBoardLiveUpdates(boardId: string, currentUserId: string): Set
     function onCardUpdated({ card }: CardUpdatedEvent) {
       queryClient.setQueryData<Card[]>(['cards', card.listId], (current) => {
         if (!current) return current;
-        return card.isArchived ? current.filter((c) => c.id !== card.id) : upsertSorted(current, card);
+        return card.isArchived
+          ? current.filter((c) => c.id !== card.id)
+          : upsertSorted(current, card);
       });
       highlight(card.id);
     }
@@ -114,7 +125,10 @@ export function useBoardLiveUpdates(boardId: string, currentUserId: string): Set
         const listId = key[1] as string;
         if (!data || listId === card.listId) return;
         if (data.some((c) => c.id === card.id)) {
-          queryClient.setQueryData<Card[]>(key, data.filter((c) => c.id !== card.id));
+          queryClient.setQueryData<Card[]>(
+            key,
+            data.filter((c) => c.id !== card.id),
+          );
         }
       });
       queryClient.setQueryData<Card[]>(['cards', card.listId], (current) =>
@@ -124,7 +138,9 @@ export function useBoardLiveUpdates(boardId: string, currentUserId: string): Set
     }
 
     function onCardDeleted({ cardId, listId }: CardDeletedEvent) {
-      queryClient.setQueryData<Card[]>(['cards', listId], (current) => current?.filter((c) => c.id !== cardId));
+      queryClient.setQueryData<Card[]>(['cards', listId], (current) =>
+        current?.filter((c) => c.id !== cardId),
+      );
     }
 
     socket.on('list:created', onListCreated);

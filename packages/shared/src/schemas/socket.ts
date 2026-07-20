@@ -28,6 +28,16 @@ export const boardAccessRevokedSchema = z.object({
 
 export type BoardAccessRevoked = z.infer<typeof boardAccessRevokedSchema>;
 
+// Story 5.5 (UX §6 "also viewing this card"): same shape/pattern as
+// presenceUpdateSchema above, scoped to a card room instead of a board room
+// — broadcast after every card:join/card:leave/disconnect.
+export const cardPresenceUpdateSchema = z.object({
+  cardId: z.string().uuid(),
+  members: z.array(presenceMemberSchema),
+});
+
+export type CardPresenceUpdate = z.infer<typeof cardPresenceUpdateSchema>;
+
 // Story 5.3: broadcast to the board room after every List/Card mutation
 // commits (Architecture §6 event catalog). Payloads carry the full updated
 // entity — not just the changed field(s) — so a client cache merge (Story

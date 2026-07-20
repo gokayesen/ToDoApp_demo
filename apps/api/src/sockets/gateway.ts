@@ -5,8 +5,18 @@ import { Server } from 'socket.io';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { redis } from '../lib/redis.js';
 import { findBoardById } from '../repositories/board.repository.js';
+import { findCardById } from '../repositories/card.repository.js';
+import { findListById } from '../repositories/list.repository.js';
 import { resolveBoardRole } from '../services/board-role.service.js';
-import { listPresence, markAbsent, markPresent, refreshPresenceHeartbeat } from '../services/presence.service.js';
+import {
+  listCardPresence,
+  listPresence,
+  markAbsent,
+  markCardAbsent,
+  markCardPresent,
+  markPresent,
+  refreshPresenceHeartbeat,
+} from '../services/presence.service.js';
 
 // The fourth Server/Socket generic (SocketData) is how socket.io types
 // per-connection state — `declare module` augmentation of Socket.data
@@ -17,13 +27,21 @@ interface SocketData {
   // to clean up presence for every room the socket was in, since disconnect
   // only gives us the socket, not which rooms it had joined at the app level.
   joinedBoards: Set<string>;
+  // Story 5.5: same idea, one level deeper — Cards this socket currently
+  // holds a `card:join` (i.e. has that Card Detail open).
+  joinedCards: Set<string>;
 }
 
 // Well under the presence heartbeat's own TTL (presence.service.ts) so a
 // connection's entry never lapses while it's still alive.
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 20_000;
 
-type GatewayServer = Server<Record<string, never>, Record<string, never>, Record<string, never>, SocketData>;
+type GatewayServer = Server<
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  SocketData
+>;
 
 let io: GatewayServer | undefined;
 
@@ -38,6 +56,13 @@ export function getIO(): GatewayServer {
 
 export function boardRoom(boardId: string): string {
   return `board:${boardId}`;
+}
+
+// Story 5.5: a narrower room than boardRoom — only sockets with this
+// specific Card's Detail view open, so presence broadcasts for "who's
+// viewing this card" don't fan out to everyone merely viewing the board.
+export function cardRoom(cardId: string): string {
+  return `card:${cardId}`;
 }
 
 type JoinAck = (result: { ok: boolean; error?: string }) => void;
@@ -78,6 +103,7 @@ export function createSocketGateway(httpServer: HttpServer): GatewayServer {
 
   io.on('connection', (socket) => {
     socket.data.joinedBoards = new Set();
+    socket.data.joinedCards = new Set();
 
     // A no-op EXPIRE on a not-yet-set key costs nothing, so this runs
     // unconditionally rather than tracking per-board timers.
@@ -86,10 +112,21 @@ export function createSocketGateway(httpServer: HttpServer): GatewayServer {
     }, PRESENCE_HEARTBEAT_INTERVAL_MS);
 
     async function broadcastPresence(boardId: string) {
-      getIO().to(boardRoom(boardId)).emit('presence:update', {
-        boardId,
-        members: await listPresence(boardId),
-      });
+      getIO()
+        .to(boardRoom(boardId))
+        .emit('presence:update', {
+          boardId,
+          members: await listPresence(boardId),
+        });
+    }
+
+    async function broadcastCardPresence(cardId: string) {
+      getIO()
+        .to(cardRoom(cardId))
+        .emit('card:presence:update', {
+          cardId,
+          members: await listCardPresence(cardId),
+        });
     }
 
     socket.on('board:join', async (boardId: unknown, ack?: JoinAck) => {
@@ -129,15 +166,70 @@ export function createSocketGateway(httpServer: HttpServer): GatewayServer {
       await broadcastPresence(boardId);
     });
 
+    // Story 5.5 (UX §6 "also viewing this card"): mirrors board:join, one
+    // level deeper — re-resolves Card -> List -> Board -> role server-side
+    // rather than trusting that the client already holds a valid board:join
+    // for this card's board (same "never trust a client-supplied id" rule).
+    socket.on('card:join', async (cardId: unknown, ack?: JoinAck) => {
+      if (typeof cardId !== 'string') {
+        ack?.({ ok: false, error: 'cardId must be a string' });
+        return;
+      }
+
+      const card = await findCardById(cardId);
+      if (!card) {
+        ack?.({ ok: false, error: 'Card not found' });
+        return;
+      }
+
+      const list = await findListById(card.listId);
+      if (!list) {
+        ack?.({ ok: false, error: 'List not found' });
+        return;
+      }
+
+      const board = await findBoardById(list.boardId);
+      if (!board) {
+        ack?.({ ok: false, error: 'Board not found' });
+        return;
+      }
+
+      const role = await resolveBoardRole(board, socket.data.userId);
+      if (!role) {
+        ack?.({ ok: false, error: 'You do not have access to this card' });
+        return;
+      }
+
+      socket.join(cardRoom(cardId));
+      socket.data.joinedCards.add(cardId);
+      await markCardPresent(cardId, socket.id, socket.data.userId);
+      ack?.({ ok: true });
+      await broadcastCardPresence(cardId);
+    });
+
+    socket.on('card:leave', async (cardId: unknown) => {
+      if (typeof cardId !== 'string') return;
+
+      socket.leave(cardRoom(cardId));
+      socket.data.joinedCards.delete(cardId);
+      await markCardAbsent(cardId, socket.id);
+      await broadcastCardPresence(cardId);
+    });
+
     socket.on('disconnect', () => {
       clearInterval(heartbeat);
       const boardIds = [...socket.data.joinedBoards];
-      void Promise.all(
-        boardIds.map(async (boardId) => {
+      const cardIds = [...socket.data.joinedCards];
+      void Promise.all([
+        ...boardIds.map(async (boardId) => {
           await markAbsent(boardId, socket.id);
           await broadcastPresence(boardId);
         }),
-      );
+        ...cardIds.map(async (cardId) => {
+          await markCardAbsent(cardId, socket.id);
+          await broadcastCardPresence(cardId);
+        }),
+      ]);
     });
   });
 

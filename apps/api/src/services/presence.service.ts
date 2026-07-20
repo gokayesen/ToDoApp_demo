@@ -16,11 +16,22 @@ function boardSetKey(boardId: string): string {
   return `presence:board:${boardId}`;
 }
 
+// Story 5.5: same membership-set idea as boardSetKey, scoped to a single
+// open Card instead of a whole board — drives the "X is also viewing this
+// card" indicator (UX §6).
+function cardSetKey(cardId: string): string {
+  return `presence:card:${cardId}`;
+}
+
 function socketKey(socketId: string): string {
   return `presence:socket:${socketId}`;
 }
 
-export async function markPresent(boardId: string, socketId: string, userId: string): Promise<void> {
+export async function markPresent(
+  boardId: string,
+  socketId: string,
+  userId: string,
+): Promise<void> {
   const user = await findUserById(userId);
   if (!user) return;
 
@@ -64,6 +75,53 @@ export async function listPresence(boardId: string): Promise<PresenceMember[]> {
   });
 
   if (stale.length > 0) await redis.srem(boardSetKey(boardId), ...stale);
+
+  return [...byUserId.values()];
+}
+
+// Story 5.5: card-level counterpart to markPresent/markAbsent/listPresence
+// above. Deliberately does NOT touch the shared socketKey heartbeat entry on
+// leave (unlike markAbsent) — that key is shared with whichever board room
+// the same socket is still in, and a Card Detail being closed must not evict
+// the user from the board's own presence list.
+export async function markCardPresent(
+  cardId: string,
+  socketId: string,
+  userId: string,
+): Promise<void> {
+  const user = await findUserById(userId);
+  if (!user) return;
+
+  const entry: PresenceMember = { userId: user.id, name: user.name, avatarUrl: user.avatarUrl };
+  await redis
+    .multi()
+    .sadd(cardSetKey(cardId), socketId)
+    .set(socketKey(socketId), JSON.stringify(entry), 'EX', HEARTBEAT_TTL_SECONDS)
+    .exec();
+}
+
+export async function markCardAbsent(cardId: string, socketId: string): Promise<void> {
+  await redis.srem(cardSetKey(cardId), socketId);
+}
+
+export async function listCardPresence(cardId: string): Promise<PresenceMember[]> {
+  const socketIds = await redis.smembers(cardSetKey(cardId));
+  if (socketIds.length === 0) return [];
+
+  const raw = await redis.mget(socketIds.map(socketKey));
+  const stale: string[] = [];
+  const byUserId = new Map<string, PresenceMember>();
+
+  raw.forEach((value, i) => {
+    if (!value) {
+      stale.push(socketIds[i]!);
+      return;
+    }
+    const entry = JSON.parse(value) as PresenceMember;
+    byUserId.set(entry.userId, entry);
+  });
+
+  if (stale.length > 0) await redis.srem(cardSetKey(cardId), ...stale);
 
   return [...byUserId.values()];
 }

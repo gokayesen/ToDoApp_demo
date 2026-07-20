@@ -1,6 +1,6 @@
 'use client';
 
-import type { Card, List } from '@todoapp/shared';
+import type { Card, List, PresenceMember } from '@todoapp/shared';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { XIcon } from 'lucide-react';
@@ -9,9 +9,12 @@ import Markdown from 'react-markdown';
 
 import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
-import { PersonAvatar } from '@/components/ui/person-avatar';
+import { AvatarStack, PersonAvatar } from '@/components/ui/person-avatar';
 import { getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
+import { useCardPresence } from '@/hooks/use-card-presence';
+import { useCardRoom } from '@/hooks/use-card-room';
+import { HIGHLIGHT_MS } from '@/hooks/use-board-live-updates';
 import { AssigneePicker } from './assignee-picker';
 import { AttachmentSection } from './attachment-section';
 import { ChecklistSection } from './checklist-section';
@@ -33,6 +36,55 @@ const DUE_STATUS_TEXT = {
   'on-track': 'text-muted-foreground',
 } as const;
 
+// Story 5.5 (UX §6): "Ayşe is also viewing this card" — same wording the UX
+// spec itself uses.
+function describeViewers(viewers: PresenceMember[]): string {
+  const [first, ...rest] = viewers;
+  if (!first) return '';
+  if (rest.length === 0) return `${first.name} is also viewing this card`;
+  return `${first.name} and ${rest.length} other${rest.length > 1 ? 's' : ''} are also viewing this card`;
+}
+
+function highlightStyle(active: boolean) {
+  return {
+    boxShadow: active ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
+    transition: 'box-shadow 1.5s ease-out',
+  };
+}
+
+// Story 5.5 (UX §6): "if they edit a field you're not currently focused on,
+// update it live with the same brief highlight treatment" as the board face
+// (card-item.tsx). There's no per-field diff on the wire (card:updated
+// carries the whole Card), so this diffs the previous vs. current value of
+// one field itself and flashes for HIGHLIGHT_MS on any change — including
+// this client's own save, same accepted quirk useBoardLiveUpdates has for
+// the board face, since card:updated carries no actorId to tell the two
+// apart. `resetKey` (the open Card's id) resyncs without flashing when a
+// *different* Card opens in this same, not-remounted component.
+function useValueHighlight(key: string, resetKey: string): boolean {
+  const [flash, setFlash] = useState(false);
+  const previous = useRef({ resetKey, key });
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    if (previous.current.resetKey !== resetKey) {
+      previous.current = { resetKey, key };
+      setFlash(false);
+      return;
+    }
+    if (previous.current.key !== key) {
+      previous.current = { resetKey, key };
+      setFlash(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setFlash(false), HIGHLIGHT_MS);
+    }
+  }, [key, resetKey]);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return flash;
+}
+
 // Story 4.1 (UX §4.3): the Card Detail shell — title + List/Board breadcrumb
 // + close button. Story 4.2 (FR18) adds inline-editable title/description;
 // Story 4.3 (FR24) adds the Labels row of the metadata section. Dates,
@@ -47,6 +99,7 @@ export function CardDetail({
   list,
   boardId,
   boardName,
+  currentUserId,
   open,
   onOpenChange,
 }: {
@@ -54,6 +107,7 @@ export function CardDetail({
   list: List | null;
   boardId: string;
   boardName: string;
+  currentUserId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -73,6 +127,32 @@ export function CardDetail({
     setEditingTitle(false);
     setEditingDescription(false);
   }, [card?.id]);
+
+  const cardId = card?.id ?? null;
+  useCardRoom(cardId);
+  const cardPresence = useCardPresence(cardId);
+  const otherViewers = cardPresence.filter((member) => member.userId !== currentUserId);
+
+  const titleHighlight = useValueHighlight(card?.title ?? '', card?.id ?? '');
+  const descriptionHighlight = useValueHighlight(card?.description ?? '', card?.id ?? '');
+  const datesHighlight = useValueHighlight(
+    `${toDateInputValue(card?.startDate)}|${toDateInputValue(card?.dueDate)}`,
+    card?.id ?? '',
+  );
+  const labelsHighlight = useValueHighlight(
+    (card?.labels ?? [])
+      .map((label) => label.id)
+      .sort()
+      .join(','),
+    card?.id ?? '',
+  );
+  const assigneesHighlight = useValueHighlight(
+    (card?.assignees ?? [])
+      .map((assignee) => assignee.id)
+      .sort()
+      .join(','),
+    card?.id ?? '',
+  );
 
   const mutation = useMutation({
     mutationFn: (input: {
@@ -196,10 +276,24 @@ export function CardDetail({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') startEditingTitle();
                       }}
+                      style={highlightStyle(titleHighlight)}
                       className="cursor-text truncate rounded-md px-1.5 py-1 -mx-1.5 font-heading text-lg font-medium text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {card.title}
                     </h2>
+                  )}
+                  {/* UX §6 "Ayşe is also viewing this card" — card-level presence,
+                      distinct from the board header's avatar stack (usePresence). */}
+                  {otherViewers.length > 0 && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <AvatarStack
+                        people={otherViewers}
+                        keyOf={(member) => member.userId}
+                        max={3}
+                        size="sm"
+                      />
+                      <span>{describeViewers(otherViewers)}</span>
+                    </div>
                   )}
                 </div>
                 <DialogPrimitive.Close
@@ -211,7 +305,10 @@ export function CardDetail({
               </div>
 
               {list && (
-                <div className="flex flex-col gap-1.5">
+                <div
+                  className="flex flex-col gap-1.5 rounded-md"
+                  style={highlightStyle(labelsHighlight)}
+                >
                   <span className="text-xs font-medium text-muted-foreground">Labels</span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {card.labels.map((label) => (
@@ -222,7 +319,10 @@ export function CardDetail({
                 </div>
               )}
 
-              <div className="flex flex-col gap-1.5">
+              <div
+                className="flex flex-col gap-1.5 rounded-md"
+                style={highlightStyle(datesHighlight)}
+              >
                 <span className="text-xs font-medium text-muted-foreground">Dates</span>
                 <div className="flex flex-wrap items-center gap-4">
                   <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -231,7 +331,9 @@ export function CardDetail({
                       type="date"
                       value={toDateInputValue(card.startDate)}
                       onChange={(e) =>
-                        mutation.mutate({ startDate: e.target.value ? new Date(e.target.value) : null })
+                        mutation.mutate({
+                          startDate: e.target.value ? new Date(e.target.value) : null,
+                        })
                       }
                       className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
@@ -242,7 +344,9 @@ export function CardDetail({
                       type="date"
                       value={toDateInputValue(card.dueDate)}
                       onChange={(e) =>
-                        mutation.mutate({ dueDate: e.target.value ? new Date(e.target.value) : null })
+                        mutation.mutate({
+                          dueDate: e.target.value ? new Date(e.target.value) : null,
+                        })
                       }
                       className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
@@ -252,7 +356,11 @@ export function CardDetail({
                       const status = getDueStatus(card.dueDate)!;
                       return (
                         <span className={cn('text-xs font-medium', DUE_STATUS_TEXT[status])}>
-                          {status === 'overdue' ? 'Overdue' : status === 'due-soon' ? 'Due soon' : 'On track'}
+                          {status === 'overdue'
+                            ? 'Overdue'
+                            : status === 'due-soon'
+                              ? 'Due soon'
+                              : 'On track'}
                         </span>
                       );
                     })()}
@@ -260,11 +368,18 @@ export function CardDetail({
               </div>
 
               {list && (
-                <div className="flex flex-col gap-1.5">
+                <div
+                  className="flex flex-col gap-1.5 rounded-md"
+                  style={highlightStyle(assigneesHighlight)}
+                >
                   <span className="text-xs font-medium text-muted-foreground">Assignees</span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {card.assignees.map((assignee) => (
-                      <PersonAvatar key={assignee.id} name={assignee.name} avatarUrl={assignee.avatarUrl} />
+                      <PersonAvatar
+                        key={assignee.id}
+                        name={assignee.name}
+                        avatarUrl={assignee.avatarUrl}
+                      />
                     ))}
                     <AssigneePicker card={card} boardId={boardId} listId={list.id} />
                   </div>
@@ -293,6 +408,7 @@ export function CardDetail({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') startEditingDescription();
                     }}
+                    style={highlightStyle(descriptionHighlight)}
                     className="min-h-16 cursor-text rounded-md px-2.5 py-1.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {card.description ? (
