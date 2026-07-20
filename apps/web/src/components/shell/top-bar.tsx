@@ -1,14 +1,15 @@
 import type { AuthResponse } from '@todoapp/shared';
-import { BellIcon, SearchIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { NotificationCenter } from './notification-center';
 import { UserMenu } from './user-menu';
 import { WorkspaceSwitcher } from './workspace-switcher';
 
 type User = AuthResponse['user'];
 
-// Search (Epic 7) and notifications (Epic 6) aren't built yet — these are
-// inert stubs marking their spot in the shell per UX §3, not broken links.
+// Search (Epic 7) isn't built yet — still an inert stub per UX §3. The
+// notification bell (Epic 6, Story 6.2) is real now.
 export function TopBar({ user }: { user: User }) {
   return (
     <header className="flex h-12 items-center justify-between border-b px-3">
@@ -18,10 +19,7 @@ export function TopBar({ user }: { user: User }) {
           <SearchIcon />
           <span className="sr-only">Search</span>
         </Button>
-        <Button variant="ghost" size="icon-sm" disabled title="Notifications — coming soon">
-          <BellIcon />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <NotificationCenter />
         <UserMenu user={user} />
       </div>
     </header>
