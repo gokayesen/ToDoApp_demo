@@ -82,7 +82,13 @@ export async function updateCard(
     );
   }
 
-  await updateCardFields(card.id, fields);
+  // Story 6.4: a rescheduled due date resets the sweep's per-value
+  // idempotency guards so it can notify fresh for the new date, rather than
+  // staying permanently silenced by whichever value the card had before.
+  const dueDateReset = dateChanged(card.dueDate, input.dueDate)
+    ? { dueSoonNotifiedAt: null, overdueNotifiedAt: null }
+    : {};
+  await updateCardFields(card.id, { ...fields, ...dueDateReset });
 
   // FR30: one entry per field that actually changed, not one generic "card
   // updated" entry — an actionable Activity feed names what happened.

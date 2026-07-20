@@ -22,7 +22,13 @@ export function listNotifications(userId: string) {
 // than being written and hidden, since there's no unread-but-suppressed
 // concept anywhere else in the app. A missing preference row means enabled,
 // same "defaults enabled" contract Story 6.1 established.
-export type NotificationEventType = 'card.assigned' | 'comment.mention' | 'workspace.added' | 'board.added';
+export type NotificationEventType =
+  | 'card.assigned'
+  | 'comment.mention'
+  | 'workspace.added'
+  | 'board.added'
+  | 'card.due_soon'
+  | 'card.overdue';
 
 export async function notifyUser(
   userId: string,

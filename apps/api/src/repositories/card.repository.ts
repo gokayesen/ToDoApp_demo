@@ -106,6 +106,9 @@ export async function updateCardPosition(
 // Story 4.2 (FR18) / Story 4.4 (FR25): every field is independently optional
 // in the input, so this only writes the keys actually present rather than a
 // fixed shape that would null out fields not being edited on a given save.
+// dueSoonNotifiedAt/overdueNotifiedAt (Story 6.4) aren't part of
+// UpdateCardRequest — card.service.ts updateCard sets them itself, alongside
+// title/description/dates, whenever dueDate actually changes.
 export async function updateCardFields(
   id: string,
   data: {
@@ -113,6 +116,8 @@ export async function updateCardFields(
     description?: string | null;
     startDate?: Date | null;
     dueDate?: Date | null;
+    dueSoonNotifiedAt?: Date | null;
+    overdueNotifiedAt?: Date | null;
   },
   client: Client = prisma,
 ) {
@@ -122,6 +127,33 @@ export async function updateCardFields(
 
 export function deleteCard(id: string) {
   return prisma.card.delete({ where: { id } });
+}
+
+// Story 6.4 (FR34/NFR5): candidates for jobs/due-date-sweep.ts — a non-
+// archived Card with a dueDate that hasn't yet had one (or both) of its
+// notification stages fire for the *current* dueDate value. Only the two
+// relations the sweep actually needs (who to notify, which board to link to)
+// rather than card.repository.ts's full withRelations shape.
+export function findCardsForDueDateSweep() {
+  return prisma.card.findMany({
+    where: {
+      isArchived: false,
+      dueDate: { not: null },
+      OR: [{ dueSoonNotifiedAt: null }, { overdueNotifiedAt: null }],
+    },
+    include: {
+      assignees: { select: { userId: true } },
+      list: { select: { boardId: true } },
+    },
+  });
+}
+
+export function markCardDueSoonNotified(cardId: string) {
+  return prisma.card.update({ where: { id: cardId }, data: { dueSoonNotifiedAt: new Date() } });
+}
+
+export function markCardOverdueNotified(cardId: string) {
+  return prisma.card.update({ where: { id: cardId }, data: { overdueNotifiedAt: new Date() } });
 }
 
 // Story 3.8 (FR21) direct per-Card archive/restore, distinct from the Story

@@ -193,28 +193,36 @@ model List {
 // ahead of Story 3.8's own direct per-Card archive/restore, but all are
 // included now to match the full Card model in Architecture §4.
 model Card {
-  id               String    @id @default(uuid()) @db.Uuid
-  listId           String    @db.Uuid
-  title            String
-  description      String?
-  position         Float
-  startDate        DateTime?
-  dueDate          DateTime?
-  isArchived       Boolean   @default(false)
+  id                String    @id @default(uuid()) @db.Uuid
+  listId            String    @db.Uuid
+  title             String
+  description       String?
+  position          Float
+  startDate         DateTime?
+  dueDate           DateTime?
+  isArchived        Boolean   @default(false)
   // Story 3.7 (FR16): set alongside isArchived when a List archive cascades
   // to this Card, cleared when that cascade is undone by restoring the List.
   // Distinguishes "archived because its List was archived" from a future
   // direct per-Card archive (Story 3.8), so restoring a List only brings back
   // Cards it cascade-archived — one a user independently archived beforehand
   // stays archived.
-  archivedWithList Boolean   @default(false)
+  archivedWithList  Boolean   @default(false)
   // Story 5.6 (FR33): optimistic-concurrency check for the "just updated by
   // X" conflict signal (UX §6) — bumped on every scalar-field update to this
   // row (title/description/dates/position/isArchived), not on join-table
   // changes (labels/assignees/checklists) which don't touch the Card row
   // itself. Not in Architecture §4's ER diagram, which never modeled
   // conflict detection — same kind of gap-fill as archivedWithList above.
-  updatedAt        DateTime  @updatedAt
+  updatedAt         DateTime  @updatedAt
+  // Story 6.4 (FR34/NFR5): idempotency guards for jobs/due-date-sweep.ts —
+  // null means "not yet notified for the current dueDate value". Both are
+  // reset to null in card.service.ts updateCard whenever dueDate actually
+  // changes, so a rescheduled due date can trigger fresh notifications.
+  // Another gap-fill not in Architecture §4's ER diagram, same rationale as
+  // archivedWithList/updatedAt above.
+  dueSoonNotifiedAt DateTime?
+  overdueNotifiedAt DateTime?
 
   list        List           @relation(fields: [listId], references: [id], onDelete: Cascade)
   labels      CardLabel[]

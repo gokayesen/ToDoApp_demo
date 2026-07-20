@@ -79,6 +79,12 @@ export const cardSchema = z.object({
   archivedWithList: z.boolean(),
   // Story 5.6 (FR33): drives the concurrent-edit conflict check above.
   updatedAt: z.coerce.date(),
+  // Story 6.4 (FR34/NFR5): idempotency guards for the due-date sweep job —
+  // not consumed by any UI, included only because card.repository.ts's
+  // mapCard spreads the full Prisma row, same as every other backend-only
+  // field already typed here (archivedWithList, updatedAt).
+  dueSoonNotifiedAt: z.coerce.date().nullable(),
+  overdueNotifiedAt: z.coerce.date().nullable(),
   // Story 4.3 (FR24) / Story 4.5 (FR26) / Story 4.6 (FR27) / Story 4.7 (FR28) /
   // Story 4.8 (FR29) / Story 4.9 (FR30): always present (possibly empty),
   // never omitted — every backend Card query includes+flattens the
