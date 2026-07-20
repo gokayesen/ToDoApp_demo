@@ -1,6 +1,6 @@
 import type { CreateWorkspaceRequest, InviteWorkspaceMemberRequest } from '@todoapp/shared';
 
-import { sendWorkspaceInviteEmail, sendWorkspaceMemberAddedEmail } from '../lib/email.js';
+import { sendWorkspaceInviteEmail } from '../lib/email.js';
 import { HttpError } from '../lib/http-error.js';
 import { generateRawInviteToken, hashInviteToken, inviteTokenExpiry } from '../lib/invite-token.js';
 import { findUserByEmail } from '../repositories/user.repository.js';
@@ -48,11 +48,14 @@ export async function inviteMember(
     if (alreadyMember) throw new HttpError(409, 'This user is already a member of the workspace');
 
     await addWorkspaceMember(workspaceId, existingUser.id);
-    await sendWorkspaceMemberAddedEmail(existingUser.email, workspace.name);
-    // FR34: no boardId — a Workspace has no dedicated page of its own to
-    // click through to (the Dashboard groups boards by workspace, but isn't
-    // itself addressed by workspaceId), so this notification is mark-as-read
-    // only, same as any other Notification whose payload omits boardId.
+    // FR34/FR35: no boardId — a Workspace has no dedicated page of its own
+    // to click through to (the Dashboard groups boards by workspace, but
+    // isn't itself addressed by workspaceId), so this notification is
+    // mark-as-read only, same as any other Notification whose payload
+    // omits boardId. notifyUser (Story 6.5) also sends the transactional
+    // email for this event now, gated by NotificationPreference.emailEnabled
+    // — superseding the old unconditional sendWorkspaceMemberAddedEmail,
+    // which would otherwise double-send alongside it.
     await notifyUser(existingUser.id, 'workspace.added', {
       message: `You were added to the workspace "${workspace.name}"`,
     });

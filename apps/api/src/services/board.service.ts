@@ -7,7 +7,7 @@ import type {
   UpdateBoardMemberRoleRequest,
 } from '@todoapp/shared';
 
-import { sendBoardInviteEmail, sendBoardMemberAddedEmail } from '../lib/email.js';
+import { sendBoardInviteEmail } from '../lib/email.js';
 import { HttpError } from '../lib/http-error.js';
 import { generateRawInviteToken, hashInviteToken, inviteTokenExpiry } from '../lib/invite-token.js';
 import {
@@ -117,7 +117,10 @@ export async function inviteBoardMember(
     if (alreadyMember) throw new HttpError(409, 'This user is already a member of the board');
 
     await addBoardMember(board.id, existingUser.id, input.role);
-    await sendBoardMemberAddedEmail(existingUser.email, board.name);
+    // FR34/FR35: notifyUser (Story 6.5) also sends the transactional email
+    // for this event, gated by NotificationPreference.emailEnabled —
+    // superseding the old unconditional sendBoardMemberAddedEmail, which
+    // would otherwise double-send alongside it.
     await notifyUser(existingUser.id, 'board.added', {
       message: `You were added to the board "${board.name}"`,
       boardId: board.id,

@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
 
+import { renderNotificationEmail, type NotificationEmailProps } from '../emails/notification-email.js';
+
 const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
 const resend = isEmailConfigured ? new Resend(process.env.RESEND_API_KEY) : undefined;
 
@@ -37,20 +39,6 @@ export async function sendWorkspaceInviteEmail(
   });
 }
 
-export async function sendWorkspaceMemberAddedEmail(to: string, workspaceName: string): Promise<void> {
-  if (!resend) {
-    console.log(`[email:dev] added ${to} to workspace ${workspaceName}`);
-    return;
-  }
-
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'ToDoApp <onboarding@resend.dev>',
-    to,
-    subject: `You've been added to ${workspaceName} on ToDoApp`,
-    html: `<p>You've been added to the <strong>${workspaceName}</strong> workspace.</p>`,
-  });
-}
-
 export async function sendBoardInviteEmail(
   to: string,
   boardName: string,
@@ -69,16 +57,32 @@ export async function sendBoardInviteEmail(
   });
 }
 
-export async function sendBoardMemberAddedEmail(to: string, boardName: string): Promise<void> {
+// Story 6.5 (FR35): the transactional-email side of every Notification
+// event (Story 6.3/6.4's triggers: card.assigned, comment.mention,
+// workspace.added, board.added, card.due_soon, card.overdue) —
+// notification.service.ts notifyUser() calls this alongside creating the
+// in-app row, each independently gated by its own NotificationPreference
+// flag (email vs. in-app). Supersedes the old unconditional
+// sendWorkspaceMemberAddedEmail/sendBoardMemberAddedEmail (removed here) for
+// the existing-user-direct-add case, which would otherwise double-send
+// alongside this — sendWorkspaceInviteEmail/sendBoardInviteEmail above stay
+// separate since they target an email with no User row yet, so there's no
+// NotificationPreference (or Notification recipient) to gate against.
+export async function sendNotificationEmail(
+  to: string,
+  subject: string,
+  content: NotificationEmailProps,
+): Promise<void> {
   if (!resend) {
-    console.log(`[email:dev] added ${to} to board ${boardName}`);
+    console.log(`[email:dev] notification email for ${to}: ${subject} — ${content.message}`);
     return;
   }
 
+  const html = await renderNotificationEmail(content);
   await resend.emails.send({
     from: process.env.EMAIL_FROM ?? 'ToDoApp <onboarding@resend.dev>',
     to,
-    subject: `You've been added to "${boardName}" on ToDoApp`,
-    html: `<p>You've been added to the <strong>${boardName}</strong> board.</p>`,
+    subject,
+    html,
   });
 }
