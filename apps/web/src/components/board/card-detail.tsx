@@ -9,8 +9,10 @@ import Markdown from 'react-markdown';
 
 import { updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
+import { PersonAvatar } from '@/components/ui/person-avatar';
 import { getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
+import { AssigneePicker } from './assignee-picker';
 import { LabelChip } from './label-badge';
 import { LabelPicker } from './label-picker';
 
@@ -253,6 +255,18 @@ export function CardDetail({
                     })()}
                 </div>
               </div>
+
+              {list && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Assignees</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {card.assignees.map((assignee) => (
+                      <PersonAvatar key={assignee.id} name={assignee.name} avatarUrl={assignee.avatarUrl} />
+                    ))}
+                    <AssigneePicker card={card} boardId={boardId} listId={list.id} />
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Description</span>

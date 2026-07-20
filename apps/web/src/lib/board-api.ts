@@ -1,6 +1,8 @@
 import type {
+  AssignCardRequest,
   AttachCardLabelRequest,
   Board,
+  BoardMember,
   Card,
   CreateCardRequest,
   CreateLabelRequest,
@@ -97,4 +99,19 @@ export function attachCardLabel(cardId: string, input: AttachCardLabelRequest) {
 
 export function detachCardLabel(cardId: string, labelId: string) {
   return apiFetch<Card>(`/cards/${cardId}/labels/${labelId}`, { method: 'DELETE' });
+}
+
+export function listBoardMembers(boardId: string) {
+  return apiFetch<BoardMember[]>(`/boards/${boardId}/members`);
+}
+
+export function assignCard(cardId: string, input: AssignCardRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/assignees`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function unassignCard(cardId: string, userId: string) {
+  return apiFetch<Card>(`/cards/${cardId}/assignees/${userId}`, { method: 'DELETE' });
 }

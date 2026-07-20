@@ -1,9 +1,17 @@
 import type { Card, List } from '@prisma/client';
-import type { AttachCardLabelRequest, CreateCardRequest, MoveCardRequest, UpdateCardRequest } from '@todoapp/shared';
+import type {
+  AssignCardRequest,
+  AttachCardLabelRequest,
+  CreateCardRequest,
+  MoveCardRequest,
+  UpdateCardRequest,
+} from '@todoapp/shared';
 
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
+import { findBoardMember } from '../repositories/board-member.repository.js';
 import {
+  assignUserToCard,
   attachLabelToCard,
   createCardForList,
   deleteCard as deleteCardRow,
@@ -12,6 +20,7 @@ import {
   findLastCardPosition,
   listCardsForList,
   setCardArchived,
+  unassignUserFromCard,
   updateCardFields,
   updateCardPosition,
 } from '../repositories/card.repository.js';
@@ -126,6 +135,25 @@ export async function attachLabel(card: Card, boardId: string, input: AttachCard
 
 export async function detachLabel(card: Card, boardId: string, labelId: string) {
   const updated = await detachLabelFromCard(card.id, labelId);
+  emitCardUpdated(boardId, updated!);
+  return updated;
+}
+
+// FR26: requireRole('MEMBER') on the route already excludes Viewers — same
+// gate as every other Card mutation above. The assignee must be an explicit
+// Board Member (see board-member.repository.ts listBoardMembers comment on
+// why the Workspace Owner's implicit access doesn't count here either).
+export async function assignUser(card: Card, boardId: string, input: AssignCardRequest) {
+  const membership = await findBoardMember(boardId, input.userId);
+  if (!membership) throw new HttpError(400, 'userId must reference a member of this board');
+
+  const updated = await assignUserToCard(card.id, input.userId);
+  emitCardUpdated(boardId, updated!);
+  return updated;
+}
+
+export async function unassignUser(card: Card, boardId: string, userId: string) {
+  const updated = await unassignUserFromCard(card.id, userId);
   emitCardUpdated(boardId, updated!);
   return updated;
 }

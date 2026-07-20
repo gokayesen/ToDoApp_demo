@@ -1,25 +1,37 @@
-import type { Card as PrismaCard, Label, Prisma } from '@prisma/client';
+import type { Card as PrismaCard, Label, Prisma, User } from '@prisma/client';
 
 import { prisma } from '../lib/prisma.js';
+
+function toUserProfile(user: User) {
+  return { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl };
+}
 
 // Accepts an optional transaction client so the move flow (card.service.ts
 // moveCard) can read a neighbor's live position and write the moved row's new
 // position inside the same DB transaction (Architecture §4 ordering strategy).
 type Client = typeof prisma | Prisma.TransactionClient;
 
-// Story 4.3 (FR24): every Card-returning query below includes+flattens its
-// attached Labels, so `Card.labels` (packages/shared) is always populated
-// consistently regardless of which endpoint returned the Card — a query that
-// dropped it would silently wipe the field for any caller that patches a
-// TanStack Query cache with the raw response (card-detail.tsx's title/
-// description save does exactly that).
-const withLabels = { labels: { include: { label: true } } } satisfies Prisma.CardInclude;
+// Story 4.3 (FR24) / Story 4.5 (FR26): every Card-returning query below
+// includes+flattens its attached Labels and Assignees, so `Card.labels`/
+// `Card.assignees` (packages/shared) are always populated consistently
+// regardless of which endpoint returned the Card — a query that dropped one
+// would silently wipe the field for any caller that patches a TanStack Query
+// cache with the raw response (card-detail.tsx's title/description save does
+// exactly that).
+const withRelations = {
+  labels: { include: { label: true } },
+  assignees: { include: { user: true } },
+} satisfies Prisma.CardInclude;
 
-type CardRow = PrismaCard & { labels: { label: Label }[] };
+type CardRow = PrismaCard & { labels: { label: Label }[]; assignees: { user: User }[] };
 
 function mapCard(row: CardRow) {
-  const { labels, ...card } = row;
-  return { ...card, labels: labels.map((cardLabel) => cardLabel.label) };
+  const { labels, assignees, ...card } = row;
+  return {
+    ...card,
+    labels: labels.map((cardLabel) => cardLabel.label),
+    assignees: assignees.map((cardAssignee) => toUserProfile(cardAssignee.user)),
+  };
 }
 
 function mapCardOrNull(row: CardRow | null) {
@@ -27,7 +39,7 @@ function mapCardOrNull(row: CardRow | null) {
 }
 
 export async function findCardById(id: string, client: Client = prisma) {
-  const row = await client.card.findUnique({ where: { id }, include: withLabels });
+  const row = await client.card.findUnique({ where: { id }, include: withRelations });
   return mapCardOrNull(row);
 }
 
@@ -35,7 +47,7 @@ export async function listCardsForList(listId: string) {
   const rows = await prisma.card.findMany({
     where: { listId, isArchived: false },
     orderBy: { position: 'asc' },
-    include: withLabels,
+    include: withRelations,
   });
   return rows.map(mapCard);
 }
@@ -49,7 +61,7 @@ export async function findLastCardPosition(listId: string): Promise<number | nul
 }
 
 export async function createCardForList(listId: string, title: string, position: number) {
-  const row = await prisma.card.create({ data: { listId, title, position }, include: withLabels });
+  const row = await prisma.card.create({ data: { listId, title, position }, include: withRelations });
   return mapCard(row);
 }
 
@@ -62,7 +74,7 @@ export async function updateCardPosition(
   const row = await client.card.update({
     where: { id },
     data: { listId, position },
-    include: withLabels,
+    include: withRelations,
   });
   return mapCard(row);
 }
@@ -80,7 +92,7 @@ export async function updateCardFields(
   },
   client: Client = prisma,
 ) {
-  const row = await client.card.update({ where: { id }, data, include: withLabels });
+  const row = await client.card.update({ where: { id }, data, include: withRelations });
   return mapCard(row);
 }
 
@@ -97,7 +109,7 @@ export async function setCardArchived(id: string, isArchived: boolean, client: C
   const row = await client.card.update({
     where: { id },
     data: isArchived ? { isArchived: true } : { isArchived: false, archivedWithList: false },
-    include: withLabels,
+    include: withRelations,
   });
   return mapCard(row);
 }
@@ -137,5 +149,21 @@ export async function attachLabelToCard(cardId: string, labelId: string) {
 
 export async function detachLabelFromCard(cardId: string, labelId: string) {
   await prisma.cardLabel.deleteMany({ where: { cardId, labelId } });
+  return findCardById(cardId);
+}
+
+// Story 4.5 (FR26): same upsert-idempotent attach / deleteMany-idempotent
+// detach convention as Label attach/detach above.
+export async function assignUserToCard(cardId: string, userId: string) {
+  await prisma.cardAssignee.upsert({
+    where: { cardId_userId: { cardId, userId } },
+    create: { cardId, userId },
+    update: {},
+  });
+  return findCardById(cardId);
+}
+
+export async function unassignUserFromCard(cardId: string, userId: string) {
+  await prisma.cardAssignee.deleteMany({ where: { cardId, userId } });
   return findCardById(cardId);
 }

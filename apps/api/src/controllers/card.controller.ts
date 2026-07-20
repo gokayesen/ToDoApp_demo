@@ -38,6 +38,16 @@ export const detachLabelHandler = asyncHandler(async (req: Request, res: Respons
   res.json(card);
 });
 
+export const assignUserHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.assignUser(req.card!, req.board!.id, req.body);
+  res.json(card);
+});
+
+export const unassignUserHandler = asyncHandler(async (req: Request, res: Response) => {
+  const card = await cardService.unassignUser(req.card!, req.board!.id, req.params.userId!);
+  res.json(card);
+});
+
 export const archiveCardHandler = asyncHandler(async (req: Request, res: Response) => {
   const card = await cardService.archiveCard(req.card!, req.board!.id);
   res.json(card);

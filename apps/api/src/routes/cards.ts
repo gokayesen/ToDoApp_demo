@@ -1,13 +1,20 @@
-import { attachCardLabelRequestSchema, moveCardRequestSchema, updateCardRequestSchema } from '@todoapp/shared';
+import {
+  assignCardRequestSchema,
+  attachCardLabelRequestSchema,
+  moveCardRequestSchema,
+  updateCardRequestSchema,
+} from '@todoapp/shared';
 import { Router } from 'express';
 
 import {
   archiveCardHandler,
+  assignUserHandler,
   attachLabelHandler,
   deleteCardHandler,
   detachLabelHandler,
   moveCardHandler,
   restoreCardHandler,
+  unassignUserHandler,
   updateCardHandler,
 } from '../controllers/card.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -48,3 +55,13 @@ cardsRouter.post(
   attachLabelHandler,
 );
 cardsRouter.delete('/:cardId/labels/:labelId', requireRole('MEMBER'), detachLabelHandler);
+
+// FR26: assign/unassign a Board Member on a Card. Same MEMBER gate as every
+// other Card mutation above.
+cardsRouter.post(
+  '/:cardId/assignees',
+  requireRole('MEMBER'),
+  validateBody(assignCardRequestSchema),
+  assignUserHandler,
+);
+cardsRouter.delete('/:cardId/assignees/:userId', requireRole('MEMBER'), unassignUserHandler);

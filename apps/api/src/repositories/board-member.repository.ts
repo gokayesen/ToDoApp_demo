@@ -8,6 +8,18 @@ export function findBoardMember(boardId: string, userId: string) {
   });
 }
 
+// Story 4.5 (FR26): powers the Card assignee picker. Scoped to explicit
+// BoardMember rows only, same set Story 2.5/2.6 already operate on — see
+// packages/shared's boardMemberSchema comment for why the Workspace Owner's
+// implicit access doesn't appear here.
+export function listBoardMembers(boardId: string) {
+  return prisma.boardMember.findMany({
+    where: { boardId },
+    include: { user: true },
+    orderBy: { user: { name: 'asc' } },
+  });
+}
+
 export function addBoardMember(boardId: string, userId: string, role: BoardRole) {
   return prisma.boardMember.create({ data: { boardId, userId, role } });
 }

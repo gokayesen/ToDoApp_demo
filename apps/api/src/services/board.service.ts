@@ -13,6 +13,7 @@ import { generateRawInviteToken, hashInviteToken, inviteTokenExpiry } from '../l
 import {
   addBoardMember,
   findBoardMember,
+  listBoardMembers as listBoardMembersRows,
   removeBoardMember as removeBoardMemberRow,
   updateBoardMemberRole,
 } from '../repositories/board-member.repository.js';
@@ -58,6 +59,17 @@ export async function createBoard(userId: string, workspaceId: string, input: Cr
 // every other handler.
 export function getBoard(board: Board) {
   return board;
+}
+
+// Story 4.5 (FR26): requireRole('VIEWER') on the route already confirms
+// access, same read-gate as the Label taxonomy's own listLabelsHandler.
+export async function listBoardMembers(board: Board) {
+  const rows = await listBoardMembersRows(board.id);
+  return rows.map((row) => ({
+    userId: row.userId,
+    role: row.role,
+    user: { id: row.user.id, email: row.user.email, name: row.user.name, avatarUrl: row.user.avatarUrl },
+  }));
 }
 
 // FR39: the Dashboard's per-workspace board grid. Same visibility split as

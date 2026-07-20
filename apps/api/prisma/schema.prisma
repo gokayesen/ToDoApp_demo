@@ -39,6 +39,7 @@ model User {
   boardMemberships     BoardMember[]
   sentWorkspaceInvites WorkspaceInvite[]     @relation("WorkspaceInviteSender")
   sentBoardInvites     BoardInvite[]         @relation("BoardInviteSender")
+  cardAssignments      CardAssignee[]
 }
 
 model OAuthAccount {
@@ -202,8 +203,9 @@ model Card {
   // stays archived.
   archivedWithList Boolean @default(false)
 
-  list   List        @relation(fields: [listId], references: [id], onDelete: Cascade)
-  labels CardLabel[]
+  list      List           @relation(fields: [listId], references: [id], onDelete: Cascade)
+  labels    CardLabel[]
+  assignees CardAssignee[]
 
   @@index([listId])
 }
@@ -236,4 +238,18 @@ model CardLabel {
 
   @@id([cardId, labelId])
   @@index([labelId])
+}
+
+// Story 4.5 (FR26): assigns a Board Member to a Card. Same plain-join shape
+// as CardLabel; Architecture §4's cascade table lists CardAssignee -> User as
+// Cascade ("pure membership row"), same rationale as BoardMember/WorkspaceMember.
+model CardAssignee {
+  cardId String @db.Uuid
+  userId String @db.Uuid
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, userId])
+  @@index([userId])
 }

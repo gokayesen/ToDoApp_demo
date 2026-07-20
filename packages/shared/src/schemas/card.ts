@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { labelSchema } from './label.js';
+import { userProfileSchema } from './user.js';
 
 export const createCardRequestSchema = z.object({
   title: z.string().min(1),
@@ -46,6 +47,15 @@ export const attachCardLabelRequestSchema = z.object({
 
 export type AttachCardLabelRequest = z.infer<typeof attachCardLabelRequestSchema>;
 
+// FR26: assign a Board Member to a Card. Unassign takes the userId as a route
+// param instead (DELETE /cards/:cardId/assignees/:userId), same convention as
+// Label attach/detach above.
+export const assignCardRequestSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+export type AssignCardRequest = z.infer<typeof assignCardRequestSchema>;
+
 export const cardSchema = z.object({
   id: z.string().uuid(),
   listId: z.string().uuid(),
@@ -56,10 +66,12 @@ export const cardSchema = z.object({
   dueDate: z.coerce.date().nullable(),
   isArchived: z.boolean(),
   archivedWithList: z.boolean(),
-  // Story 4.3 (FR24): always present (possibly empty), never omitted — every
-  // backend Card query includes+flattens the CardLabel join so this field is
-  // consistent whichever endpoint returned the Card (see card.repository.ts).
+  // Story 4.3 (FR24) / Story 4.5 (FR26): always present (possibly empty),
+  // never omitted — every backend Card query includes+flattens the CardLabel/
+  // CardAssignee joins so these fields are consistent whichever endpoint
+  // returned the Card (see card.repository.ts).
   labels: z.array(labelSchema),
+  assignees: z.array(userProfileSchema),
 });
 
 export type Card = z.infer<typeof cardSchema>;

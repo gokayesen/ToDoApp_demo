@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { userProfileSchema } from './user.js';
+
 export const createBoardRequestSchema = z.object({
   name: z.string().min(1),
 });
@@ -30,6 +32,19 @@ export const updateBoardMemberRoleRequestSchema = z.object({
 });
 
 export type UpdateBoardMemberRoleRequest = z.infer<typeof updateBoardMemberRoleRequestSchema>;
+
+// Story 4.5 (FR26): powers the Card assignee picker (needs to know who's
+// assignable) — an explicit BoardMember row's user profile plus their role.
+// Scoped to explicit rows only, same set Story 2.5/2.6's invite/role-change
+// endpoints operate on; a Workspace Owner's implicit Board access
+// (Architecture §7.4) has no BoardMember row and so doesn't appear here.
+export const boardMemberSchema = z.object({
+  userId: z.string().uuid(),
+  role: boardRoleSchema,
+  user: userProfileSchema,
+});
+
+export type BoardMember = z.infer<typeof boardMemberSchema>;
 
 // FR12's "confirmation step": the caller must echo the board's current name
 // back, the same type-to-confirm pattern used for other irreversible deletes.

@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AvatarStack } from '@/components/ui/person-avatar';
 import { getDueStatus } from '@/lib/due-date-status';
 import { LabelDot } from './label-badge';
 
@@ -111,10 +112,9 @@ export function CardItem({
           </div>
         )}
       </div>
-      {/* FR23 card face preview, UX §4.2 order (labels, then due date):
-          assignees/checklists/comments/attachments still have no data model
-          (later Epic 4 stories), so they're left off rather than rendered
-          empty. */}
+      {/* FR23 card face preview, UX §4.2 order (labels, due date, assignees):
+          checklists/comments/attachments still have no data model (later
+          Epic 4 stories), so they're left off rather than rendered empty. */}
       {card.labels.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {card.labels.map((label) => (
@@ -134,6 +134,9 @@ export function CardItem({
             </div>
           );
         })()}
+      {card.assignees.length > 0 && (
+        <AvatarStack people={card.assignees} keyOf={(assignee) => assignee.id} max={3} size="sm" />
+      )}
     </div>
   );
 }

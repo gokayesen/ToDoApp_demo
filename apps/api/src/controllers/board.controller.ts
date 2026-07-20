@@ -17,6 +17,13 @@ export const listBoardsHandler = asyncHandler(async (req: Request, res: Response
   res.json(boards);
 });
 
+// Story 4.5 (FR26): powers the Card assignee picker. requireRole('VIEWER')
+// on the route already confirms access.
+export const listBoardMembersHandler = asyncHandler(async (req: Request, res: Response) => {
+  const members = await boardService.listBoardMembers(req.board!);
+  res.json(members);
+});
+
 // requireRole('ADMIN') already ran (see routes/boards.ts), so req.board is set.
 export const inviteBoardMemberHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await boardService.inviteBoardMember(req.userId!, req.board!, req.body);

@@ -14,6 +14,7 @@ import {
   deleteBoardHandler,
   getBoardHandler,
   inviteBoardMemberHandler,
+  listBoardMembersHandler,
   removeBoardMemberHandler,
   restoreBoardHandler,
   updateBoardBackgroundHandler,
@@ -31,6 +32,9 @@ boardsRouter.use(authenticate);
 boardsRouter.use('/:boardId', loadBoardContext);
 
 boardsRouter.get('/:boardId', requireRole('VIEWER'), getBoardHandler);
+// Story 4.5 (FR26): list this Board's explicit Members (id/name/avatar/role),
+// same VIEWER read-gate as GET /:boardId itself.
+boardsRouter.get('/:boardId/members', requireRole('VIEWER'), listBoardMembersHandler);
 boardsRouter.post(
   '/:boardId/invites',
   requireRole('ADMIN'),
