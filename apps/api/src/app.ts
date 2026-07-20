@@ -9,6 +9,7 @@ import { boardsRouter } from './routes/boards.js';
 import { cardsRouter } from './routes/cards.js';
 import { checklistItemsRouter } from './routes/checklist-items.js';
 import { checklistsRouter } from './routes/checklists.js';
+import { commentsRouter } from './routes/comments.js';
 import { healthRouter } from './routes/health.js';
 import { labelsRouter } from './routes/labels.js';
 import { listsRouter } from './routes/lists.js';
@@ -35,6 +36,7 @@ export function createApp() {
   app.use('/labels', labelsRouter);
   app.use('/checklists', checklistsRouter);
   app.use('/checklist-items', checklistItemsRouter);
+  app.use('/comments', commentsRouter);
 
   app.use(errorHandler);
 

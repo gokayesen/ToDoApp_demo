@@ -40,6 +40,7 @@ model User {
   sentWorkspaceInvites WorkspaceInvite[]     @relation("WorkspaceInviteSender")
   sentBoardInvites     BoardInvite[]         @relation("BoardInviteSender")
   cardAssignments      CardAssignee[]
+  comments             Comment[]
 }
 
 model OAuthAccount {
@@ -207,6 +208,7 @@ model Card {
   labels     CardLabel[]
   assignees  CardAssignee[]
   checklists Checklist[]
+  comments   Comment[]
 
   @@index([listId])
 }
@@ -238,6 +240,30 @@ model ChecklistItem {
   checklist Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 
   @@index([checklistId])
+}
+
+// Story 4.7 (FR28): body is a plain-text convention — a mention is literally
+// `@Full Name` typed via the composer's autocomplete (packages/shared has no
+// dedicated mention schema; the Architecture §4 ER diagram doesn't define one
+// either) and re-highlighted client-side by matching against the board's
+// current member names. No notification wiring here: Notification doesn't
+// exist until Epic 6 (Story 6.1/6.3 is what would consume this later).
+// userId is nullable + authorNameSnapshot denormalized per Architecture §4's
+// cascade table (SetNull, not Cascade, on user deletion) so a comment
+// survives its author's account being deleted — shared board history, same
+// rationale as Attachment.uploaderId/ActivityLog.userId.
+model Comment {
+  id                 String   @id @default(uuid()) @db.Uuid
+  cardId             String   @db.Uuid
+  userId             String?  @db.Uuid
+  authorNameSnapshot String
+  body               String
+  createdAt          DateTime @default(now())
+
+  card Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([cardId])
 }
 
 // Story 4.3 (FR24): per-board Label taxonomy (name + color, `color` a fixed

@@ -2,6 +2,7 @@ import {
   assignCardRequestSchema,
   attachCardLabelRequestSchema,
   createChecklistRequestSchema,
+  createCommentRequestSchema,
   moveCardRequestSchema,
   updateCardRequestSchema,
 } from '@todoapp/shared';
@@ -19,6 +20,7 @@ import {
   updateCardHandler,
 } from '../controllers/card.controller.js';
 import { createChecklistHandler } from '../controllers/checklist.controller.js';
+import { createCommentHandler } from '../controllers/comment.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { loadCardContext } from '../middleware/load-resource-context.js';
 import { requireRole } from '../middleware/require-role.js';
@@ -78,4 +80,14 @@ cardsRouter.post(
   requireRole('MEMBER'),
   validateBody(createChecklistRequestSchema),
   createChecklistHandler,
+);
+
+// FR28: create a Comment on this Card. Same nested-under-parent convention as
+// Checklist creation above; deletion lives under /comments instead
+// (routes/comments.ts) since it needs the extra author-or-admin check.
+cardsRouter.post(
+  '/:cardId/comments',
+  requireRole('MEMBER'),
+  validateBody(createCommentRequestSchema),
+  createCommentHandler,
 );

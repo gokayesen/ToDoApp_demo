@@ -3,7 +3,7 @@
 import type { Card, List } from '@todoapp/shared';
 import { SortableKeyboardPlugin } from '@dnd-kit/dom/sortable';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { AlertTriangleIcon, CalendarIcon, ClockIcon, ListChecksIcon, MoveIcon } from 'lucide-react';
+import { AlertTriangleIcon, CalendarIcon, ClockIcon, ListChecksIcon, MessageSquareIcon, MoveIcon } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -113,10 +113,10 @@ export function CardItem({
           </div>
         )}
       </div>
-      {/* FR23/FR27 card face preview, UX §4.2 order (labels, due date,
-          assignees, checklist progress): comments/attachments still have no
-          data model (later Epic 4 stories), so they're left off rather than
-          rendered empty. */}
+      {/* FR23/FR27/FR28 card face preview, UX §4.2 order (labels, due date,
+          assignees, checklist progress, comment count): attachments still
+          have no data model (Story 4.8), so left off rather than rendered
+          empty. */}
       {card.labels.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {card.labels.map((label) => (
@@ -141,20 +141,31 @@ export function CardItem({
       )}
       {(() => {
         const totalItems = card.checklists.reduce((sum, checklist) => sum + checklist.items.length, 0);
-        if (totalItems === 0) return null;
+        const commentCount = card.comments.length;
+        if (totalItems === 0 && commentCount === 0) return null;
         const checkedItems = card.checklists.reduce(
           (sum, checklist) => sum + checklist.items.filter((item) => item.isChecked).length,
           0,
         );
         return (
-          <div
-            className={cn(
-              'flex w-fit items-center gap-1 rounded px-1 text-xs text-muted-foreground',
-              checkedItems === totalItems && 'bg-primary/10 text-primary',
+          <div className="flex items-center gap-2">
+            {totalItems > 0 && (
+              <div
+                className={cn(
+                  'flex items-center gap-1 rounded px-1 text-xs text-muted-foreground',
+                  checkedItems === totalItems && 'bg-primary/10 text-primary',
+                )}
+              >
+                <ListChecksIcon className="size-3" />
+                {checkedItems}/{totalItems}
+              </div>
             )}
-          >
-            <ListChecksIcon className="size-3" />
-            {checkedItems}/{totalItems}
+            {commentCount > 0 && (
+              <div className="flex items-center gap-1 rounded px-1 text-xs text-muted-foreground">
+                <MessageSquareIcon className="size-3" />
+                {commentCount}
+              </div>
+            )}
           </div>
         );
       })()}

@@ -2,6 +2,7 @@ import type {
   Card as PrismaCard,
   Checklist,
   ChecklistItem,
+  Comment,
   Label,
   Prisma,
   User,
@@ -18,24 +19,26 @@ function toUserProfile(user: User) {
 // position inside the same DB transaction (Architecture §4 ordering strategy).
 type Client = typeof prisma | Prisma.TransactionClient;
 
-// Story 4.3 (FR24) / Story 4.5 (FR26) / Story 4.6 (FR27): every Card-returning
-// query below includes+flattens its attached Labels, Assignees, and
-// Checklists (with their Items), so `Card.labels`/`Card.assignees`/
-// `Card.checklists` (packages/shared) are always populated consistently
-// regardless of which endpoint returned the Card — a query that dropped one
-// would silently wipe the field for any caller that patches a TanStack Query
-// cache with the raw response (card-detail.tsx's title/description save does
-// exactly that).
+// Story 4.3 (FR24) / Story 4.5 (FR26) / Story 4.6 (FR27) / Story 4.7 (FR28):
+// every Card-returning query below includes+flattens its attached Labels,
+// Assignees, Checklists (with their Items), and Comments, so `Card.labels`/
+// `Card.assignees`/`Card.checklists`/`Card.comments` (packages/shared) are
+// always populated consistently regardless of which endpoint returned the
+// Card — a query that dropped one would silently wipe the field for any
+// caller that patches a TanStack Query cache with the raw response
+// (card-detail.tsx's title/description save does exactly that).
 const withRelations = {
   labels: { include: { label: true } },
   assignees: { include: { user: true } },
   checklists: { include: { items: { orderBy: { position: 'asc' } } }, orderBy: { position: 'asc' } },
+  comments: { orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.CardInclude;
 
 type CardRow = PrismaCard & {
   labels: { label: Label }[];
   assignees: { user: User }[];
   checklists: (Checklist & { items: ChecklistItem[] })[];
+  comments: Comment[];
 };
 
 function mapCard(row: CardRow) {

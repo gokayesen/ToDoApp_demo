@@ -7,6 +7,7 @@ import type {
   CreateCardRequest,
   CreateChecklistItemRequest,
   CreateChecklistRequest,
+  CreateCommentRequest,
   CreateLabelRequest,
   CreateListRequest,
   Label,
@@ -154,4 +155,15 @@ export function moveChecklistItem(itemId: string, input: MoveChecklistItemReques
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function createComment(cardId: string, input: CreateCommentRequest) {
+  return apiFetch<Card>(`/cards/${cardId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteComment(commentId: string) {
+  return apiFetch<Card>(`/comments/${commentId}`, { method: 'DELETE' });
 }

@@ -5,6 +5,7 @@ import { findBoardById } from '../repositories/board.repository.js';
 import { findCardById } from '../repositories/card.repository.js';
 import { findChecklistItemById } from '../repositories/checklist-item.repository.js';
 import { findChecklistById } from '../repositories/checklist.repository.js';
+import { findCommentById } from '../repositories/comment.repository.js';
 import { findLabelById } from '../repositories/label.repository.js';
 import { findListById } from '../repositories/list.repository.js';
 import { resolveBoardRole } from '../services/board-role.service.js';
@@ -183,6 +184,49 @@ export const loadChecklistItemContext = asyncHandler(
 
     req.checklistItem = item;
     req.checklist = checklist;
+    req.card = card;
+    req.list = list;
+    req.board = board;
+    req.boardRole = role;
+    next();
+  },
+);
+
+// Comment routes carry a :commentId param — context resolves through its
+// owning Card up to Board, same one-level-deeper idea as loadCardContext.
+export const loadCommentContext = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const comment = await findCommentById(req.params.commentId!);
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    const card = await findCardById(comment.cardId);
+    if (!card) {
+      res.status(404).json({ error: 'Card not found' });
+      return;
+    }
+
+    const list = await findListById(card.listId);
+    if (!list) {
+      res.status(404).json({ error: 'List not found' });
+      return;
+    }
+
+    const board = await findBoardById(list.boardId);
+    if (!board) {
+      res.status(404).json({ error: 'Board not found' });
+      return;
+    }
+
+    const role = await resolveBoardRole(board, req.userId!);
+    if (!role) {
+      res.status(403).json({ error: 'You do not have access to this board' });
+      return;
+    }
+
+    req.comment = comment;
     req.card = card;
     req.list = list;
     req.board = board;
