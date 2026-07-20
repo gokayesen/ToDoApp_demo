@@ -24,7 +24,7 @@ export const deleteListHandler = asyncHandler(async (req: Request, res: Response
 });
 
 export const moveListHandler = asyncHandler(async (req: Request, res: Response) => {
-  const list = await listService.moveList(req.list!, req.body);
+  const list = await listService.moveList(req.list!, req.body, req.userId!);
   res.json(list);
 });
 

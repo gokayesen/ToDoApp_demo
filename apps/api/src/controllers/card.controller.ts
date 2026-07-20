@@ -14,21 +14,21 @@ export const listCardsHandler = asyncHandler(async (req: Request, res: Response)
 });
 
 export const deleteCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  await cardService.deleteCard(req.card!);
+  await cardService.deleteCard(req.card!, req.board!.id);
   res.status(204).end();
 });
 
 export const moveCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.moveCard(req.card!, req.list!, req.body);
+  const card = await cardService.moveCard(req.card!, req.list!, req.body, req.userId!);
   res.json(card);
 });
 
 export const archiveCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.archiveCard(req.card!);
+  const card = await cardService.archiveCard(req.card!, req.board!.id);
   res.json(card);
 });
 
 export const restoreCardHandler = asyncHandler(async (req: Request, res: Response) => {
-  const card = await cardService.restoreCard(req.card!);
+  const card = await cardService.restoreCard(req.card!, req.board!.id);
   res.json(card);
 });
