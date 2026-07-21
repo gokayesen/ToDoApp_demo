@@ -15,7 +15,9 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:test:create": "psql \"postgresql://todoapp:todoapp@localhost:5433/postgres\" -c \"CREATE DATABASE todoapp_test\"",
-    "sweep:due-dates": "tsx src/jobs/run-due-date-sweep.ts"
+    "sweep:due-dates": "tsx src/jobs/run-due-date-sweep.ts",
+    "seed:perf": "tsx src/scripts/seed-perf-data.ts",
+    "perf:bench": "tsx src/scripts/perf-benchmark.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1090.0",
@@ -56,6 +58,7 @@
     "@types/supertest": "^7.2.1",
     "eslint": "^9.17.0",
     "prisma": "^6.2.1",
+    "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
