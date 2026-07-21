@@ -33,7 +33,9 @@ function toDateInputValue(value: string | Date | null | undefined): string {
 
 const DUE_STATUS_TEXT = {
   overdue: 'text-red-600 dark:text-red-400',
-  'due-soon': 'text-amber-600 dark:text-amber-400',
+  // amber-600 on white is only ~3.2:1 at this text-xs size, below WCAG AA's
+  // 4.5:1 — amber-700 clears ~5:1 (Story 8.4 contrast audit).
+  'due-soon': 'text-amber-700 dark:text-amber-400',
   'on-track': 'text-muted-foreground',
 } as const;
 
@@ -320,7 +322,7 @@ export function CardDetail({
                       this notice just explains why the in-progress edit
                       vanished. */}
                   {conflictNotice && (
-                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">
                       {conflictNotice}
                     </p>
                   )}

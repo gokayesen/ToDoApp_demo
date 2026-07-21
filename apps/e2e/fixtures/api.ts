@@ -118,3 +118,11 @@ export async function createCard(request: APIRequestContext, owner: TestUser, li
   if (!res.ok()) throw new Error(`createCard failed: ${res.status()} ${await res.text()}`);
   return res.json();
 }
+
+export async function listCards(request: APIRequestContext, owner: TestUser, listId: string) {
+  const res = await request.get(`${API_URL}/lists/${listId}/cards`, {
+    headers: authHeaders(owner.accessToken),
+  });
+  if (!res.ok()) throw new Error(`listCards failed: ${res.status()} ${await res.text()}`);
+  return res.json();
+}

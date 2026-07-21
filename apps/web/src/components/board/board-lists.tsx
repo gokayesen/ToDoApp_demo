@@ -1,15 +1,16 @@
 'use client';
 
 import type { Card, List } from '@todoapp/shared';
-import { KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
+import { Accessibility, KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
 import { move } from '@dnd-kit/helpers';
-import { DragDropProvider, type DragEndEvent, type DragOverEvent } from '@dnd-kit/react';
+import { DragDropProvider, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
 import { useBoardLiveUpdates } from '@/hooks/use-board-live-updates';
 import { useFlipAnimation } from '@/hooks/use-flip-animation';
+import { useLiveMoveAnnouncements } from '@/hooks/use-live-move-announcements';
 import { useOutOfViewToasts } from '@/hooks/use-out-of-view-toasts';
 import { usePresence } from '@/hooks/use-presence';
 import { useVisibleListIds } from '@/hooks/use-visible-list-ids';
@@ -76,6 +77,58 @@ export function BoardLists({
     presence,
     orderedLists,
   );
+  const moveAnnouncement = useLiveMoveAnnouncements(currentUserId, visibleListIds, presence, orderedLists);
+
+  // UX §8 "keyboard DnD": dnd-kit's default Accessibility plugin (included in
+  // `defaults`, so already on) announces pick-up/drop to screen readers, but
+  // its default message names the dragged entity by its raw `source.id` —
+  // which is a card/list UUID here (useSortable's `id` in
+  // card-item.tsx/list-column.tsx), meaningless read aloud. Override with the
+  // actual card title / list name. `describe` closes over the current
+  // cardsByList/orderedLists — recreating this small array each render is
+  // negligible next to the DnD/animation work this component already does.
+  function describeDraggable(entity: { id: PropertyKey; type?: unknown }): string {
+    const id = String(entity.id);
+    if (entity.type === 'list') {
+      const list = orderedLists.find((l) => l.id === id);
+      return `list "${list?.name ?? id}"`;
+    }
+    const card = Object.values(cardsByList)
+      .flat()
+      .find((c) => c.id === id);
+    return `card "${card?.title ?? id}"`;
+  }
+
+  // Renders whatever is currently being dragged inside <DragOverlay> below —
+  // this is *why* the Feedback plugin skips its own hidden-placeholder DOM
+  // insertion for every draggable in this provider (see the removeChild
+  // crash comment in card-item.tsx's useSortable call): with a DragOverlay
+  // present, dnd-kit leaves the original source element untouched in the DOM
+  // and lets this floating clone represent the drag instead. A plain visual
+  // clone, not the real CardItem/ListColumn (which carry their own
+  // interactive dropdowns/handles that have no business existing twice).
+  function renderDragOverlayContent(source: { id: PropertyKey; type?: unknown }) {
+    const id = String(source.id);
+    if (source.type === 'list') {
+      const list = orderedLists.find((l) => l.id === id);
+      if (!list) return null;
+      return (
+        <div className="w-72 rounded-lg bg-muted p-2 shadow-lg ring-1 ring-foreground/10">
+          <div className="truncate px-1 py-1 text-sm font-medium text-foreground">{list.name}</div>
+        </div>
+      );
+    }
+    const card = Object.values(cardsByList)
+      .flat()
+      .find((c) => c.id === id);
+    if (!card) return null;
+    return (
+      <div className="max-w-64 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-lg ring-1 ring-foreground/10">
+        {card.title}
+      </div>
+    );
+  }
+
   const flipKey =
     orderedLists.map((list) => list.id).join(',') +
     '|' +
@@ -165,7 +218,21 @@ export function BoardLists({
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    if (event.canceled) return;
+    if (event.canceled) {
+      // Cards disable dnd-kit's own OptimisticSortingPlugin (useSortable
+      // comment in card-item.tsx — it crashed on cross-List drags), so their
+      // live reorder during the drag is applied directly into cardsByList by
+      // handleDragOver above instead of dnd-kit's own DOM plugin. That plugin
+      // would normally snap the DOM back on a canceled drag for free; since
+      // cards opt out of it, a cancel must revert this React state by hand
+      // or the card is left showing its rejected mid-drag position (found via
+      // a real keyboard Escape-cancel in Playwright, Story 8.4 audit) — Lists
+      // keep the default plugin, which already reverts on its own.
+      if (event.operation.source?.type === 'card') {
+        setCardsByList(serverCardsByList);
+      }
+      return;
+    }
     const { source } = event.operation;
     if (!source) return;
 
@@ -249,6 +316,23 @@ export function BoardLists({
     <div ref={flipContainerRef} className="contents">
       <DragDropProvider
         sensors={sensors}
+        plugins={(defaults) => [
+          ...defaults,
+          Accessibility.configure({
+            announcements: {
+              dragstart({ operation: { source } }: DragStartEvent) {
+                if (!source) return;
+                return `Picked up ${describeDraggable(source)}.`;
+              },
+              dragend({ operation: { source }, canceled }: DragEndEvent) {
+                if (!source) return;
+                return canceled
+                  ? `Cancelled dragging ${describeDraggable(source)}.`
+                  : `Dropped ${describeDraggable(source)}.`;
+              },
+            },
+          }),
+        ]}
         onDragStart={() => setIsDragging(true)}
         onDragOver={handleDragOver}
         onDragEnd={(event) => {
@@ -272,8 +356,16 @@ export function BoardLists({
           />
         ))}
         <AddListForm boardId={boardId} />
+        <DragOverlay>{(source) => renderDragOverlayContent(source)}</DragOverlay>
       </DragDropProvider>
       <BoardToasts toasts={toasts} onDismiss={dismiss} />
+      {/* UX §8: screen-reader-only live region for remote card/list moves
+          landing somewhere already visible (use-live-move-announcements.ts);
+          the sighted-only highlight-fade above (useBoardLiveUpdates) has no
+          screen-reader equivalent otherwise. */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {moveAnnouncement}
+      </div>
       <CardDetail
         card={openCard}
         list={openCardList}

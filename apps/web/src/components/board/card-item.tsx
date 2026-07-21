@@ -1,6 +1,7 @@
 'use client';
 
 import type { Card, List } from '@todoapp/shared';
+import { KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
 import { SortableKeyboardPlugin } from '@dnd-kit/dom/sortable';
 import { useSortable } from '@dnd-kit/react/sortable';
 import {
@@ -31,14 +32,27 @@ const dueDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day:
 // color swap on a shared icon.
 const DUE_STATUS_PRESENTATION = {
   overdue: { icon: AlertTriangleIcon, className: 'text-red-600 dark:text-red-400', label: 'Overdue' },
-  'due-soon': { icon: ClockIcon, className: 'text-amber-600 dark:text-amber-400', label: 'Due soon' },
+  // amber-600 on this card face's white background is only ~3.2:1 (fails
+  // WCAG AA's 4.5:1 for this text-xs size) — amber-700 clears ~5:1.
+  'due-soon': { icon: ClockIcon, className: 'text-amber-700 dark:text-amber-400', label: 'Due soon' },
   'on-track': { icon: CalendarIcon, className: 'text-muted-foreground', label: 'Due' },
 } as const;
 
 // FR19: cards reorder within/across Lists via drag (pointer + keyboard, via
-// dnd-kit's KeyboardSensor on the whole card — Space/Enter to pick up, arrow
-// keys to move, Esc to cancel). `group` scopes the sortable to its owning
-// List so cross-list drags resolve via board-lists.tsx's live onDragOver.
+// dnd-kit's KeyboardSensor on the whole card — Space to pick up, arrow keys
+// to move, Esc to cancel). `group` scopes the sortable to its owning List so
+// cross-list drags resolve via board-lists.tsx's live onDragOver.
+//
+// Story 8.4 accessibility audit: dnd-kit's KeyboardSensor default also treats
+// Enter as a start/end key, but this card's own onKeyDown already claims
+// Enter to open Card Detail (below) — and since dnd-kit's native listener
+// fires before React's synthetic one, Enter silently started an invisible
+// drag instead of ever reaching onOpen, confirmed via a real keyboard-driven
+// Playwright run. Per-draggable `sensors` below overrides just the
+// start/end keys to drop Enter, restoring "Enter opens the card" and
+// leaving Space as the sole pick-up/drop key for cards specifically (List
+// dragging, list-column.tsx, keeps the KeyboardSensor default unchanged —
+// it has no such conflict).
 //
 // UX §7 mobile fallback: cross-list drag isn't reliable on a single-list-at-
 // a-time mobile layout, so "Move to list…" gives an explicit, non-drag path
@@ -73,8 +87,48 @@ export function CardItem({
     // reconciliation for the same nodes (once state updated on drop) and
     // crashed with a `removeChild` DOM error. Board-lists.tsx's onDragOver
     // now owns all live reordering via React state instead, so this is the
-    // only plugin left enabled (keyboard pick-up/move/drop stays intact).
+    // only sorting plugin left enabled (keyboard pick-up/move/drop stays
+    // intact).
+    //
+    // Story 8.4 accessibility audit: a second, independent source of the
+    // exact same `removeChild` crash class remained even with
+    // OptimisticSortingPlugin off — the default Feedback plugin (always
+    // active, part of dnd-kit's core) inserts its own "hidden placeholder"
+    // DOM node directly into the list on every drag, outside React's
+    // knowledge, which could then desync from React's own reconciliation of
+    // the same list (reproduced via a real keyboard cross-list move in
+    // Playwright, ~40% of runs, confirmed present before this story's
+    // changes too — not a regression). Fixed by rendering a real
+    // `<DragOverlay>` in board-lists.tsx instead — dnd-kit skips placeholder
+    // creation entirely whenever an overlay is present (the officially
+    // documented way to opt out, per Feedback.ts), and leaves the original
+    // source element untouched in the DOM meanwhile — no plugin override
+    // needed here. (An earlier attempt at `Feedback.configure({feedback:
+    // 'move'})` also avoided the placeholder, but that also applies its own
+    // CSS transform to the original element, which measurably conflicted
+    // with this app's own state+FLIP-driven reordering and made a single
+    // ArrowDown move the card two slots instead of one — reverted.)
     plugins: [SortableKeyboardPlugin],
+    // Per-draggable override (takes precedence over DragDropProvider's
+    // global sensors, board-lists.tsx) — same PointerSensor config as the
+    // global default, but KeyboardSensor drops 'Enter' from start/end (see
+    // comment above).
+    sensors: [
+      PointerSensor.configure({
+        activatorElements: (source) => [source.element, source.handle],
+      }),
+      KeyboardSensor.configure({
+        keyboardCodes: {
+          start: ['Space'],
+          cancel: ['Escape'],
+          end: ['Space'],
+          up: ['ArrowUp'],
+          down: ['ArrowDown'],
+          left: ['ArrowLeft'],
+          right: ['ArrowRight'],
+        },
+      }),
+    ],
   });
 
   return (
