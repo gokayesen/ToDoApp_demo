@@ -4,7 +4,10 @@ import { asyncHandler } from '../lib/async-handler.js';
 import { REFRESH_TOKEN_TTL_DAYS } from '../lib/refresh-token.js';
 import * as authService from '../services/auth.service.js';
 
-const REFRESH_COOKIE_NAME = 'refresh_token';
+// Exported for controllers/user.controller.ts's deleteMeHandler (Story 8.8) —
+// account deletion clears the same refresh cookie logoutHandler does, since
+// the underlying RefreshToken rows are gone the moment the User row cascades.
+export const REFRESH_COOKIE_NAME = 'refresh_token';
 
 // SameSite=None; Secure; HttpOnly — required because web (Vercel) and api (Railway)
 // sit on different origins in production (Architecture §7.1). Scoped to /auth since

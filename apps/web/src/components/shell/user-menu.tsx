@@ -43,6 +43,9 @@ export function UserMenu({ user }: { user: User }) {
         <p className="truncate px-1.5 py-1 text-xs font-medium text-muted-foreground">
           {user.email}
         </p>
+        <DropdownMenuItem onClick={() => router.push('/settings/account')}>
+          Account settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleLogout}>
           Log out
