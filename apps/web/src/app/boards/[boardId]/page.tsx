@@ -2,15 +2,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/lib/auth-context';
 import { getBoard, listLists } from '@/lib/board-api';
+import { EMPTY_CARD_FILTERS } from '@/lib/card-filters';
 import { recordBoardVisit } from '@/lib/recent-boards';
 import { useBoardRoom } from '@/hooks/use-board-room';
 import { usePresence } from '@/hooks/use-presence';
 import { AppShell } from '@/components/shell/app-shell';
 import { BoardLists } from '@/components/board/board-lists';
+import { FilterPopover } from '@/components/board/filter-popover';
 import { PresenceAvatars } from '@/components/board/presence-avatars';
 
 const FALLBACK_BACKGROUND = 'var(--muted)';
@@ -27,6 +29,7 @@ export default function BoardViewPage() {
   const router = useRouter();
   const { boardId } = useParams<{ boardId: string }>();
   const { user, loading } = useAuth();
+  const [filters, setFilters] = useState(EMPTY_CARD_FILTERS);
 
   const { data: board, isLoading: boardLoading } = useQuery({
     queryKey: ['board', boardId],
@@ -43,6 +46,14 @@ export default function BoardViewPage() {
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
   }, [loading, user, router]);
+
+  // Clears a filter carried over from a previous Board (label/assignee ids
+  // there wouldn't even resolve to anything meaningful on this one) whenever
+  // the route's own boardId changes — Next.js reuses this component instance
+  // across sibling dynamic-route navigations rather than remounting it.
+  useEffect(() => {
+    setFilters(EMPTY_CARD_FILTERS);
+  }, [boardId]);
 
   useEffect(() => {
     if (board) recordBoardVisit({ id: board.id, name: board.name, workspaceId: board.workspaceId });
@@ -70,7 +81,10 @@ export default function BoardViewPage() {
           <h1 className="truncate text-lg font-semibold text-foreground drop-shadow-sm">
             {boardLoading ? 'Loading…' : board?.name}
           </h1>
-          <PresenceAvatars members={presence} />
+          <div className="flex items-center gap-2">
+            <FilterPopover boardId={boardId} filters={filters} onChange={setFilters} />
+            <PresenceAvatars members={presence} />
+          </div>
         </header>
         <div className="flex flex-1 items-start gap-3 overflow-x-auto px-6 pb-6">
           {listsLoading ? (
@@ -81,6 +95,7 @@ export default function BoardViewPage() {
               boardName={board?.name ?? ''}
               lists={lists ?? []}
               currentUserId={user.id}
+              filters={filters}
             />
           )}
         </div>

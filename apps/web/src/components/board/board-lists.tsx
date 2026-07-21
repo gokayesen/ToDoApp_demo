@@ -13,6 +13,7 @@ import { useFlipAnimation } from '@/hooks/use-flip-animation';
 import { useOutOfViewToasts } from '@/hooks/use-out-of-view-toasts';
 import { usePresence } from '@/hooks/use-presence';
 import { useVisibleListIds } from '@/hooks/use-visible-list-ids';
+import { cardMatchesFilters, EMPTY_CARD_FILTERS, type CardFilters } from '@/lib/card-filters';
 import { listCards, moveCard, moveList } from '@/lib/board-api';
 import { AddListForm } from './add-list-form';
 import { BoardToasts } from './board-toasts';
@@ -42,11 +43,13 @@ export function BoardLists({
   boardName,
   lists,
   currentUserId,
+  filters = EMPTY_CARD_FILTERS,
 }: {
   boardId: string;
   boardName: string;
   lists: List[];
   currentUserId: string;
+  filters?: CardFilters;
 }) {
   const [orderedLists, setOrderedLists] = useState(lists);
   const [cardsByList, setCardsByList] = useState<CardsByList>({});
@@ -54,6 +57,15 @@ export function BoardLists({
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const highlightedIds = useBoardLiveUpdates(boardId, currentUserId);
+  // FR38: recomputed straight off cardsByList every render — cheap relative
+  // to the DnD/animation work already happening here, and naturally empty
+  // when `filters` is EMPTY_CARD_FILTERS (every card matches an empty filter).
+  const dimmedIds = new Set(
+    Object.values(cardsByList)
+      .flat()
+      .filter((card) => !cardMatchesFilters(card, filters))
+      .map((card) => card.id),
+  );
 
   const flipContainerRef = useRef<HTMLDivElement>(null);
   const visibleListIds = useVisibleListIds(flipContainerRef);
@@ -256,6 +268,7 @@ export function BoardLists({
             onMoveToList={handleMoveToList}
             onOpenCard={setOpenCardId}
             highlightedIds={highlightedIds}
+            dimmedIds={dimmedIds}
           />
         ))}
         <AddListForm boardId={boardId} />

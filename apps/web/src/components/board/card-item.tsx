@@ -51,6 +51,7 @@ export function CardItem({
   onMoveToList,
   onOpen,
   isHighlighted,
+  isDimmed,
 }: {
   card: Card;
   index: number;
@@ -59,6 +60,7 @@ export function CardItem({
   onMoveToList: (cardId: string, targetListId: string) => void;
   onOpen: (cardId: string) => void;
   isHighlighted: boolean;
+  isDimmed: boolean;
 }) {
   const { ref, isDragging } = useSortable({
     id: card.id,
@@ -89,12 +91,16 @@ export function CardItem({
       }}
       className="group flex cursor-grab flex-col gap-1 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-sm outline-none ring-1 ring-foreground/10 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
       style={{
-        opacity: isDragging ? 0.5 : 1,
+        // FR38/UX §4.2 "dims ... non-matching cards in place (no layout
+        // jump/reload)": opacity-only, never removed from the DOM/flow, so
+        // filtering never shifts other cards' positions or interferes with
+        // dnd-kit's own isDragging opacity above (drag always wins).
+        opacity: isDragging ? 0.5 : isDimmed ? 0.35 : 1,
         // UX §6 "soft colored outline, ~1.5s fade": appears instantly when a
         // live update lands (useBoardLiveUpdates), then this transition
         // fades it back out once that hook drops the id from its set.
         boxShadow: isHighlighted ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
-        transition: 'box-shadow 1.5s ease-out',
+        transition: 'box-shadow 1.5s ease-out, opacity 150ms ease-out',
       }}
     >
       <div className="flex items-start justify-between gap-1">

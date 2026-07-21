@@ -36,6 +36,7 @@ export function ListColumn({
   onMoveToList,
   onOpenCard,
   highlightedIds,
+  dimmedIds,
 }: {
   boardId: string;
   list: List;
@@ -46,6 +47,7 @@ export function ListColumn({
   onMoveToList: (cardId: string, targetListId: string) => void;
   onOpenCard: (cardId: string) => void;
   highlightedIds: Set<string>;
+  dimmedIds: Set<string>;
 }) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLHeadingElement>(null);
@@ -113,6 +115,7 @@ export function ListColumn({
               onMoveToList={onMoveToList}
               onOpen={onOpenCard}
               isHighlighted={highlightedIds.has(card.id)}
+              isDimmed={dimmedIds.has(card.id)}
             />
           ))
         )}
