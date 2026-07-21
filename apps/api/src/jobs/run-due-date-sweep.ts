@@ -1,6 +1,8 @@
 import 'dotenv/config';
+import '../instrument.js';
 
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 import { redis } from '../lib/redis.js';
 import { runDueDateSweep } from './due-date-sweep.js';
 import { withLeaderLock } from './leader-lock.js';
@@ -19,16 +21,17 @@ const LOCK_TTL_MS = 5 * 60 * 1000;
 async function main() {
   const ran = await withLeaderLock(LOCK_KEY, LOCK_TTL_MS, async () => {
     const result = await runDueDateSweep();
-    console.log(
-      `due-date sweep complete: ${result.overdueNotified} overdue, ${result.dueSoonNotified} due-soon`,
+    logger.info(
+      { overdueNotified: result.overdueNotified, dueSoonNotified: result.dueSoonNotified },
+      'due-date sweep complete',
     );
   });
-  if (!ran) console.log('due-date sweep skipped — another instance holds the lock');
+  if (!ran) logger.info('due-date sweep skipped — another instance holds the lock');
 }
 
 main()
   .catch((error: unknown) => {
-    console.error('due-date sweep failed', error);
+    logger.error({ err: error }, 'due-date sweep failed');
     process.exitCode = 1;
   })
   .finally(async () => {

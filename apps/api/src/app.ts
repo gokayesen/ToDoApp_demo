@@ -1,7 +1,11 @@
+import * as Sentry from '@sentry/node';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import pinoHttp from 'pino-http';
 
+import { isSentryConfigured } from './instrument.js';
+import { logger } from './lib/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { passport } from './lib/passport.js';
 import { attachmentsRouter } from './routes/attachments.js';
@@ -25,6 +29,7 @@ export function createApp() {
   // Explicit non-wildcard origin: required for credentialed cross-origin requests
   // (Architecture §7.1) — wildcard + credentials:true is rejected by browsers anyway.
   app.use(cors({ credentials: true, origin: process.env.CORS_ORIGIN }));
+  app.use(pinoHttp({ logger }));
   app.use(express.json());
   app.use(cookieParser());
   app.use(passport.initialize());
@@ -44,6 +49,12 @@ export function createApp() {
   app.use('/notifications', notificationsRouter);
   app.use('/search', searchRouter);
 
+  // Sentry must see errors before our own error-formatting handler responds
+  // to the client (NFR10) — setupExpressErrorHandler re-throws via next(err)
+  // so errorHandler below still runs unchanged.
+  if (isSentryConfigured) {
+    Sentry.setupExpressErrorHandler(app);
+  }
   app.use(errorHandler);
 
   return app;

@@ -10,6 +10,7 @@ import type {
 import { sendBoardInviteEmail } from '../lib/email.js';
 import { HttpError } from '../lib/http-error.js';
 import { generateRawInviteToken, hashInviteToken, inviteTokenExpiry } from '../lib/invite-token.js';
+import { logger } from '../lib/logger.js';
 import {
   addBoardMember,
   findBoardMember,
@@ -178,7 +179,7 @@ export async function changeBoardMemberRole(
 
   if (ROLE_RANK[input.role] < ROLE_RANK[membership.role]) {
     emitBoardAccessRevoked(board.id, targetUserId).catch((error: unknown) => {
-      console.error('Failed to evict downgraded board member', error);
+      logger.error({ err: error }, 'failed to evict downgraded board member');
     });
   }
 
@@ -193,7 +194,7 @@ export async function removeBoardMember(board: Board, targetUserId: string) {
 
   await removeBoardMemberRow(board.id, targetUserId);
   emitBoardAccessRevoked(board.id, targetUserId, { fullyDisconnect: true }).catch((error: unknown) => {
-    console.error('Failed to evict removed board member', error);
+    logger.error({ err: error }, 'failed to evict removed board member');
   });
 }
 

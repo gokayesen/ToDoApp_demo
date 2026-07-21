@@ -2,6 +2,7 @@ import type { Attachment, BoardRole, Card } from '@prisma/client';
 import type { CreateAttachmentRequest, PresignAttachmentRequest } from '@todoapp/shared';
 
 import { HttpError } from '../lib/http-error.js';
+import { logger } from '../lib/logger.js';
 import { createPresignedUpload, deleteObjectForFileUrl, isR2Configured } from '../lib/r2.js';
 import { findCardById } from '../repositories/card.repository.js';
 import {
@@ -80,7 +81,7 @@ export async function deleteAttachment(
   // Best-effort — the DB row deletion (the source of truth for what the app
   // shows) has already committed either way; see r2.ts's comment.
   await deleteObjectForFileUrl(attachment.fileUrl).catch((error: unknown) => {
-    console.error('Failed to delete R2 object for attachment', error);
+    logger.error({ err: error }, 'failed to delete R2 object for attachment');
   });
 
   const updated = await findCardById(card.id);

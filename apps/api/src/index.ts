@@ -1,9 +1,11 @@
 import 'dotenv/config';
+import './instrument.js';
 import { createServer } from 'http';
 
 import { createApp } from './app.js';
 import { runDueDateSweep } from './jobs/due-date-sweep.js';
 import { withLeaderLock } from './jobs/leader-lock.js';
+import { logger } from './lib/logger.js';
 import { createSocketGateway } from './sockets/gateway.js';
 
 const port = Number(process.env.PORT ?? 4000);
@@ -16,7 +18,7 @@ const httpServer = createServer(app);
 createSocketGateway(httpServer);
 
 httpServer.listen(port, () => {
-  console.log(`api listening on :${port}`);
+  logger.info(`api listening on :${port}`);
 });
 
 // Story 6.4 (FR34/NFR5): Architecture §9's in-process fallback for the
@@ -32,7 +34,7 @@ const DUE_DATE_SWEEP_LOCK_TTL_MS = 5 * 60 * 1000;
 function runSweepTick() {
   withLeaderLock('lock:due-date-sweep', DUE_DATE_SWEEP_LOCK_TTL_MS, runDueDateSweep).catch(
     (error: unknown) => {
-      console.error('due-date sweep failed', error);
+      logger.error({ err: error }, 'due-date sweep failed');
     },
   );
 }

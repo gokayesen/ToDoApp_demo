@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
 import { renderNotificationEmail, type NotificationEmailProps } from '../emails/notification-email.js';
+import { logger } from './logger.js';
 
 const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
 const resend = isEmailConfigured ? new Resend(process.env.RESEND_API_KEY) : undefined;
@@ -9,7 +10,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   if (!resend) {
     // No Resend key configured (e.g. local dev) — log instead of failing the request,
     // so the reset flow is still testable end-to-end without a live email provider.
-    console.log(`[email:dev] password reset link for ${to}: ${resetUrl}`);
+    logger.info(`[email:dev] password reset link for ${to}: ${resetUrl}`);
     return;
   }
 
@@ -27,7 +28,7 @@ export async function sendWorkspaceInviteEmail(
   registerUrl: string,
 ): Promise<void> {
   if (!resend) {
-    console.log(`[email:dev] workspace invite for ${to} (${workspaceName}): ${registerUrl}`);
+    logger.info(`[email:dev] workspace invite for ${to} (${workspaceName}): ${registerUrl}`);
     return;
   }
 
@@ -45,7 +46,7 @@ export async function sendBoardInviteEmail(
   registerUrl: string,
 ): Promise<void> {
   if (!resend) {
-    console.log(`[email:dev] board invite for ${to} (${boardName}): ${registerUrl}`);
+    logger.info(`[email:dev] board invite for ${to} (${boardName}): ${registerUrl}`);
     return;
   }
 
@@ -74,7 +75,7 @@ export async function sendNotificationEmail(
   content: NotificationEmailProps,
 ): Promise<void> {
   if (!resend) {
-    console.log(`[email:dev] notification email for ${to}: ${subject} — ${content.message}`);
+    logger.info(`[email:dev] notification email for ${to}: ${subject} — ${content.message}`);
     return;
   }
 

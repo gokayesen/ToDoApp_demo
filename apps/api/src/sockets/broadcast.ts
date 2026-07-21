@@ -1,5 +1,6 @@
 import type { Card, List } from '@prisma/client';
 
+import { logger } from '../lib/logger.js';
 import { boardRoom, getIO } from './gateway.js';
 
 // Story 5.3 / Architecture §6 event catalog: every List/Card mutation
@@ -11,7 +12,7 @@ function emit(boardId: string, event: string, payload: unknown): void {
   try {
     getIO().to(boardRoom(boardId)).emit(event, payload);
   } catch (error) {
-    console.error(`Failed to broadcast ${event}`, error);
+    logger.error({ err: error, event }, 'failed to broadcast');
   }
 }
 
