@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 import { useActiveWorkspace } from '@/lib/active-workspace-context';
@@ -13,6 +15,7 @@ import { CreateWorkspaceDialog } from '@/components/dashboard/create-workspace-d
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
   const { activeWorkspaceId, setActiveWorkspaceId } = useActiveWorkspace();
   const { data: workspaces } = useQuery({ queryKey: ['workspaces'], queryFn: listWorkspaces });
   const { data: boards } = useQuery({
@@ -69,10 +72,16 @@ export function Sidebar() {
             <div className="flex flex-col gap-1">
               <p className="px-1.5 text-xs font-medium text-muted-foreground">Boards</p>
               {boards?.map((board) => (
-                // No Board View route yet (Epic 3) — not a link, just a preview list item.
-                <div key={board.id} className="truncate rounded-md px-1.5 py-1 text-sm">
+                <Link
+                  key={board.id}
+                  href={`/boards/${board.id}`}
+                  className={cn(
+                    'truncate rounded-md px-1.5 py-1 text-sm hover:bg-muted',
+                    pathname === `/boards/${board.id}` && 'bg-muted text-foreground',
+                  )}
+                >
                   {board.name}
-                </div>
+                </Link>
               ))}
               <CreateBoardDialog
                 workspaceId={activeWorkspaceId}
