@@ -70,7 +70,7 @@ Each story is sized (**S** = ~half day, **M** = ~1–2 days, **L** = ~3+ days, s
 | 3.7 | Archive/restore List (cascades to its Cards) | S | FR16 |
 | 3.8 | Archive/restore Card; permanent delete Card | S | FR21, FR22 |
 | 3.9 | Card face preview: labels, due-date pill, assignee avatars, checklist progress, comment/attachment counts (stubs until Epic 4 fills real data) | S | FR23 |
-| 3.10 *(stretch)* | Cross-board card move | M | FR20 (out-of-scope candidate, PRD §8) |
+| 3.10 *(stretch, descoped 2026-07-21)* | ~~Cross-board card move~~ — not implemented in v1, see `sprint-status.yaml` | M | FR20 (out-of-scope candidate, PRD §8) |
 
 ## Epic 4 — Card Detail & Rich Content
 
