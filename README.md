@@ -6,7 +6,8 @@ WebSocket-based live collaboration, optimistic-UI with conflict handling, and a 
 typed-end-to-end codebase.
 
 > **Status:** Feature-complete (Epics 1–7 and the majority of Epic 8 done — see [Project status](#project-status)).
-> Production deployment (Vercel + Railway) is the one remaining piece before this is live for reviewers.
+> This project is built and packaged to run locally — see [Getting started](#getting-started); it is
+> not deployed to a public URL.
 
 ## Table of contents
 
@@ -206,13 +207,13 @@ Summary:
 | 5 — Real-Time Collaboration | ✅ Done |
 | 6 — Notifications | ✅ Done |
 | 7 — Search & Filtering | ✅ Done |
-| 8 — Polish, Accessibility & Deployment | CI, test coverage, E2E, accessibility, performance, observability, and account deletion are done. **Production deployment (8.7)** is the remaining open item — it needs live third-party credentials (Google OAuth client, Resend API key, R2 bucket, Sentry DSN) and Vercel/Railway accounts that only the project owner can provision. |
+| 8 — Polish, Accessibility & Deployment | CI, test coverage, E2E, accessibility, performance, observability, and account deletion are done. **Production deployment (8.7)** is intentionally on hold — this project targets a clean, runnable-from-source repository rather than a hosted public instance. |
 
 Every backend/frontend integration with a live third-party service (Google OAuth, Resend, R2, Sentry)
 is implemented behind a guarded-optional pattern: without credentials configured, it cleanly no-ops
 (a 503, a console-log fallback, or a skipped init) rather than breaking the rest of the app. This
-means the app is fully runnable and testable locally today, with production deployment the one step
-that requires the project owner's own accounts and credentials.
+means the full app — auth, real-time collaboration, everything — is runnable and testable end-to-end
+from [Getting started](#getting-started) with no external accounts required.
 
 ## Planning documents
 
