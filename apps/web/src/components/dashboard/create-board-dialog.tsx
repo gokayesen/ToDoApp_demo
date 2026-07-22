@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
 import { ApiError } from '@/lib/api-client';
+import { createList } from '@/lib/board-api';
 import { createBoard } from '@/lib/workspace-api';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,10 +20,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 // UX §4.1 asks for 2–3 starter templates on the "create your first board" CTA.
-// Lists/Cards don't exist yet (Epic 3), so a template can only pre-fill a
-// name for now — seeding real starter Lists belongs in whichever Epic 3 story
-// adds List CRUD, not here.
-const TEMPLATES = ['Simple Kanban', 'Sprint Board', 'Blank Board'];
+// Each template names its own starter Lists, seeded via sequential
+// POST /boards/:boardId/lists calls right after board creation — the list
+// service always appends at the end (Architecture §4 position engine), so a
+// plain awaited loop naturally produces the right left-to-right order with
+// no position param needed.
+const TEMPLATES: { name: string; lists: string[] }[] = [
+  { name: 'Simple Kanban', lists: ['To Do', 'Doing', 'Done'] },
+  { name: 'Sprint Board', lists: ['Backlog', 'In Progress', 'Review', 'Done'] },
+  { name: 'Blank Board', lists: [] },
+];
 
 export function CreateBoardDialog({
   workspaceId,
@@ -33,15 +40,23 @@ export function CreateBoardDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
+  const [starterLists, setStarterLists] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => createBoard(workspaceId, { name }),
+    mutationFn: async () => {
+      const board = await createBoard(workspaceId, { name });
+      for (const listName of starterLists) {
+        await createList(board.id, { name: listName });
+      }
+      return board;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boards', workspaceId] });
       setOpen(false);
       setName('');
+      setStarterLists([]);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Something went wrong'),
   });
@@ -58,19 +73,23 @@ export function CreateBoardDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create board</DialogTitle>
-          <DialogDescription>Pick a starter name or write your own.</DialogDescription>
+          <DialogDescription>Pick a starter template or write your own name.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-1.5">
             {TEMPLATES.map((template) => (
               <Button
-                key={template}
+                key={template.name}
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setName(template)}
+                title={template.lists.length > 0 ? `Adds lists: ${template.lists.join(', ')}` : 'No starter lists'}
+                onClick={() => {
+                  setName(template.name);
+                  setStarterLists(template.lists);
+                }}
               >
-                {template}
+                {template.name}
               </Button>
             ))}
           </div>
