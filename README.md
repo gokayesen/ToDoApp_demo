@@ -226,3 +226,7 @@ architecture, epic/story breakdown, and the implementation-readiness check) are 
 - [Architecture.md](./_bmad-output/planning-artifacts/Architecture.md) — data model, real-time design, auth/permission flow, deployment topology
 - [Epics-and-Stories.md](./_bmad-output/planning-artifacts/Epics-and-Stories.md) — full story breakdown
 - [Implementation-Readiness-Report.md](./_bmad-output/planning-artifacts/Implementation-Readiness-Report.md)
+
+## License
+
+[MIT](./LICENSE)
