@@ -7,6 +7,28 @@ export function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
+// Deterministic label-palette color from the person's name, so the same
+// person keeps the same avatar color across the app rather than every
+// initials-fallback avatar rendering identically (design handoff's own
+// Avatar.jsx does the same hash-into-a-fixed-palette trick).
+const AVATAR_PALETTE = [
+  'var(--label-red)',
+  'var(--label-orange)',
+  'var(--label-amber)',
+  'var(--label-green)',
+  'var(--label-teal)',
+  'var(--label-blue)',
+  'var(--label-indigo)',
+  'var(--label-purple)',
+  'var(--label-pink)',
+  'var(--label-gray)',
+];
+function colorFor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length]!;
+}
+
 // Shared circular avatar (image or initials fallback) — used by presence
 // (board header live-viewer stack) and Card assignees (board face + Card
 // Detail), so both stacks render the same visual language.
@@ -22,8 +44,9 @@ export function PersonAvatar({
   return (
     <div
       title={name}
+      style={avatarUrl ? undefined : { background: colorFor(name || 'user') }}
       className={cn(
-        'flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-[0.65rem] font-medium text-primary-foreground ring-2 ring-background',
+        'flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[0.65rem] font-medium text-white ring-2 ring-background',
         className,
       )}
     >

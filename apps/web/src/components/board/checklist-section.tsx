@@ -14,6 +14,7 @@ import {
   updateChecklistItem,
 } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -186,9 +187,9 @@ function ChecklistCard({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-200">
           <div
-            className="h-full rounded-full bg-primary transition-[width]"
+            className={cn('h-full rounded-full transition-[width]', percent >= 100 ? 'bg-success-fg' : 'bg-primary')}
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -292,13 +293,8 @@ function ChecklistItemRow({
   }
 
   return (
-    <div className="group flex items-center gap-1.5">
-      <input
-        type="checkbox"
-        checked={item.isChecked}
-        onChange={(e) => onToggle(item.id, e.target.checked)}
-        className="size-4 shrink-0 accent-primary"
-      />
+    <div className="group flex items-center gap-2">
+      <Checkbox checked={item.isChecked} onCheckedChange={(checked) => onToggle(item.id, checked)} />
       {editing ? (
         <input
           autoFocus

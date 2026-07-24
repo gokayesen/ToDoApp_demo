@@ -3,15 +3,33 @@
 import type { Card, List, PresenceMember } from '@todoapp/shared';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { XIcon } from 'lucide-react';
+import {
+  AlignLeftIcon,
+  ArchiveIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  CheckSquareIcon,
+  LayoutGridIcon,
+  MessageSquareIcon,
+  PaperclipIcon,
+  TagIcon,
+  UsersIcon,
+  XIcon,
+} from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Markdown from 'react-markdown';
 
 import { ApiError } from '@/lib/api-client';
-import { updateCard } from '@/lib/board-api';
+import { archiveCard, updateCard } from '@/lib/board-api';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { AvatarStack, PersonAvatar } from '@/components/ui/person-avatar';
-import { getDueStatus } from '@/lib/due-date-status';
+import { DUE_STATUS_PRESENTATION, getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
 import { useCardPresence } from '@/hooks/use-card-presence';
 import { useCardRoom } from '@/hooks/use-card-room';
@@ -31,13 +49,31 @@ function toDateInputValue(value: string | Date | null | undefined): string {
   return value ? String(value).slice(0, 10) : '';
 }
 
-const DUE_STATUS_TEXT = {
-  overdue: 'text-red-600 dark:text-red-400',
-  // amber-600 on white is only ~3.2:1 at this text-xs size, below WCAG AA's
-  // 4.5:1 — amber-700 clears ~5:1 (Story 8.4 contrast audit).
-  'due-soon': 'text-amber-700 dark:text-amber-400',
-  'on-track': 'text-muted-foreground',
-} as const;
+function MetaLabel({ icon: Icon, children }: { icon: typeof TagIcon; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+      <Icon className="size-3.5" />
+      {children}
+    </span>
+  );
+}
+
+function RailButton({
+  icon: Icon,
+  children,
+  ...props
+}: React.ComponentProps<'button'> & { icon: typeof TagIcon }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 rounded-sm border border-border bg-card px-2.5 py-1.5 text-left text-sm font-medium text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+      {...props}
+    >
+      <Icon className="size-3.5 text-muted-foreground" />
+      {children}
+    </button>
+  );
+}
 
 // Story 5.5 (UX §6): "Ayşe is also viewing this card" — same wording the UX
 // spec itself uses.
@@ -103,6 +139,8 @@ export function CardDetail({
   boardId,
   boardName,
   currentUserId,
+  otherLists,
+  onMoveToList,
   open,
   onOpenChange,
 }: {
@@ -111,10 +149,20 @@ export function CardDetail({
   boardId: string;
   boardName: string;
   currentUserId: string;
+  otherLists: List[];
+  onMoveToList: (cardId: string, targetListId: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const labelsSectionRef = useRef<HTMLDivElement>(null);
+  const datesSectionRef = useRef<HTMLDivElement>(null);
+  const assigneesSectionRef = useRef<HTMLDivElement>(null);
+  const checklistSectionRef = useRef<HTMLDivElement>(null);
+  const attachmentSectionRef = useRef<HTMLDivElement>(null);
+  function scrollToSection(ref: React.RefObject<HTMLDivElement | null>) {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [editingDescription, setEditingDescription] = useState(false);
@@ -203,6 +251,23 @@ export function CardDetail({
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: () => {
+      if (!card) throw new Error('No card open');
+      return archiveCard(card.id);
+    },
+    onSuccess: () => {
+      if (list) queryClient.invalidateQueries({ queryKey: ['cards', list.id] });
+      onOpenChange(false);
+    },
+  });
+
+  function handleMoveToList(targetListId: string) {
+    if (!card) return;
+    onMoveToList(card.id, targetListId);
+    onOpenChange(false);
+  }
+
   function startEditingTitle() {
     if (!card) return;
     cancelledRef.current = false;
@@ -277,14 +342,16 @@ export function CardDetail({
           data-slot="card-detail-content"
           className={cn(
             'fixed inset-0 z-50 flex flex-col gap-4 overflow-y-auto bg-popover p-4 text-sm text-popover-foreground outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
-            'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-[min(85vh,720px)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6 sm:ring-1 sm:ring-foreground/10 sm:data-open:zoom-in-95 sm:data-closed:zoom-out-95',
+            'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-[min(85vh,720px)] sm:w-full sm:max-w-[720px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:p-6 sm:ring-1 sm:ring-foreground/10 sm:data-open:zoom-in-95 sm:data-closed:zoom-out-95',
           )}
+          style={{ boxShadow: 'var(--shadow-modal)' }}
         >
           {card && (
             <>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="flex items-center gap-1.5 truncate text-xs font-medium text-muted-foreground">
+                    <LayoutGridIcon className="size-3" />
                     {boardName}
                     {list ? ` / ${list.name}` : ''}
                   </p>
@@ -348,12 +415,16 @@ export function CardDetail({
                 </DialogPrimitive.Close>
               </div>
 
+              <div className="flex flex-col gap-5 sm:flex-row sm:gap-[26px]">
+              <div className="flex min-w-0 flex-1 flex-col gap-5">
+
               {list && (
                 <div
+                  ref={labelsSectionRef}
                   className="flex flex-col gap-1.5 rounded-md"
                   style={highlightStyle(labelsHighlight)}
                 >
-                  <span className="text-xs font-medium text-muted-foreground">Labels</span>
+                  <MetaLabel icon={TagIcon}>Labels</MetaLabel>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {card.labels.map((label) => (
                       <LabelChip key={label.id} label={label} />
@@ -364,11 +435,12 @@ export function CardDetail({
               )}
 
               <div
+                ref={datesSectionRef}
                 className="flex flex-col gap-1.5 rounded-md"
                 style={highlightStyle(datesHighlight)}
               >
-                <span className="text-xs font-medium text-muted-foreground">Dates</span>
-                <div className="flex flex-wrap items-center gap-4">
+                <MetaLabel icon={CalendarIcon}>Due date</MetaLabel>
+                <div className="flex flex-wrap items-center gap-3">
                   <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     Start
                     <input
@@ -380,7 +452,7 @@ export function CardDetail({
                           expectedUpdatedAt: card.updatedAt,
                         })
                       }
-                      className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="rounded-sm border border-input bg-card px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                   </label>
                   <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -394,19 +466,24 @@ export function CardDetail({
                           expectedUpdatedAt: card.updatedAt,
                         })
                       }
-                      className="rounded-md border border-input bg-background px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="rounded-sm border border-input bg-card px-2 py-1 text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     />
                   </label>
                   {card.dueDate &&
                     (() => {
                       const status = getDueStatus(card.dueDate)!;
+                      const { icon: StatusIcon, fg, bg, border, label } = DUE_STATUS_PRESENTATION[status];
                       return (
-                        <span className={cn('text-xs font-medium', DUE_STATUS_TEXT[status])}>
-                          {status === 'overdue'
-                            ? 'Overdue'
-                            : status === 'due-soon'
-                              ? 'Due soon'
-                              : 'On track'}
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-xs font-semibold',
+                            fg,
+                            bg,
+                            border,
+                          )}
+                        >
+                          <StatusIcon className="size-3" />
+                          {label}
                         </span>
                       );
                     })()}
@@ -415,10 +492,11 @@ export function CardDetail({
 
               {list && (
                 <div
+                  ref={assigneesSectionRef}
                   className="flex flex-col gap-1.5 rounded-md"
                   style={highlightStyle(assigneesHighlight)}
                 >
-                  <span className="text-xs font-medium text-muted-foreground">Assignees</span>
+                  <MetaLabel icon={UsersIcon}>Assignees</MetaLabel>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {card.assignees.map((assignee) => (
                       <PersonAvatar
@@ -433,7 +511,7 @@ export function CardDetail({
               )}
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Description</span>
+                <MetaLabel icon={AlignLeftIcon}>Description</MetaLabel>
                 {editingDescription ? (
                   <textarea
                     autoFocus
@@ -443,7 +521,7 @@ export function CardDetail({
                     onBlur={saveDescription}
                     onKeyDown={handleDescriptionKeyDown}
                     placeholder="Write a description in Markdown…"
-                    className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="w-full resize-none rounded-sm border border-input bg-card px-2.5 py-1.5 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   />
                 ) : (
                   <div
@@ -455,7 +533,10 @@ export function CardDetail({
                       if (e.key === 'Enter') startEditingDescription();
                     }}
                     style={highlightStyle(descriptionHighlight)}
-                    className="min-h-16 cursor-text rounded-md px-2.5 py-1.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                    className={cn(
+                      'min-h-16 cursor-text rounded-sm px-3 py-2 outline-none hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-ring',
+                      card.description && 'bg-neutral-100',
+                    )}
                   >
                     {card.description ? (
                       <div className="prose prose-sm max-w-none dark:prose-invert">
@@ -469,25 +550,80 @@ export function CardDetail({
               </div>
 
               {list && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Checklists</span>
+                <div ref={checklistSectionRef} className="flex flex-col gap-1.5">
+                  <MetaLabel icon={CheckSquareIcon}>Checklist</MetaLabel>
                   <ChecklistSection card={card} listId={list.id} />
                 </div>
               )}
 
               {list && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Attachments</span>
+                <div ref={attachmentSectionRef} className="flex flex-col gap-1.5">
+                  <MetaLabel icon={PaperclipIcon}>Attachments</MetaLabel>
                   <AttachmentSection card={card} listId={list.id} />
                 </div>
               )}
 
               {list && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Activity</span>
+                  <MetaLabel icon={MessageSquareIcon}>Activity</MetaLabel>
                   <CommentSection card={card} boardId={boardId} listId={list.id} />
                 </div>
               )}
+              </div>
+
+              {list && (
+                <div className="flex shrink-0 flex-col gap-1.5 sm:w-[172px]">
+                  <span className="px-0.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+                    Add to card
+                  </span>
+                  <RailButton icon={TagIcon} onClick={() => scrollToSection(labelsSectionRef)}>
+                    Labels
+                  </RailButton>
+                  <RailButton icon={CalendarIcon} onClick={() => scrollToSection(datesSectionRef)}>
+                    Due date
+                  </RailButton>
+                  <RailButton icon={UsersIcon} onClick={() => scrollToSection(assigneesSectionRef)}>
+                    Assignee
+                  </RailButton>
+                  <RailButton icon={CheckSquareIcon} onClick={() => scrollToSection(checklistSectionRef)}>
+                    Checklist
+                  </RailButton>
+                  <RailButton icon={PaperclipIcon} onClick={() => scrollToSection(attachmentSectionRef)}>
+                    Attachment
+                  </RailButton>
+                  <div className="my-1 h-px bg-border" />
+                  {otherLists.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                            <ArrowRightIcon className="size-3.5" />
+                            Move to list…
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="start">
+                        {otherLists.map((otherList) => (
+                          <DropdownMenuItem key={otherList.id} onClick={() => handleMoveToList(otherList.id)}>
+                            {otherList.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-danger-fg hover:bg-danger-bg hover:text-danger-fg"
+                    disabled={archiveMutation.isPending}
+                    onClick={() => archiveMutation.mutate()}
+                  >
+                    <ArchiveIcon className="size-3.5" />
+                    Archive
+                  </Button>
+                </div>
+              )}
+              </div>
             </>
           )}
         </DialogPrimitive.Popup>

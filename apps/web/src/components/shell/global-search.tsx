@@ -48,9 +48,12 @@ export function GlobalSearch() {
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Trigger
         render={
-          <Button variant="ghost" size="icon-sm" title="Search">
-            <SearchIcon />
-            <span className="sr-only">Search</span>
+          <Button
+            variant="outline"
+            className="h-9 w-full max-w-[420px] justify-start gap-2 px-2.5 font-normal text-muted-foreground"
+          >
+            <SearchIcon className="size-4" />
+            <span className="truncate">Search cards, boards, people…</span>
           </Button>
         }
       />
@@ -61,7 +64,7 @@ export function GlobalSearch() {
         />
         <DialogPrimitive.Popup
           data-slot="global-search-content"
-          className="fixed top-24 left-1/2 z-50 flex max-h-[70vh] w-full max-w-lg -translate-x-1/2 flex-col gap-3 overflow-hidden rounded-xl bg-popover p-3 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+          className="fixed top-24 left-1/2 z-50 flex max-h-[70vh] w-full max-w-lg -translate-x-1/2 flex-col gap-3 overflow-hidden rounded-lg bg-popover p-3 text-sm text-popover-foreground shadow-popover ring-1 ring-foreground/10 outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
         >
           <DialogPrimitive.Title className="sr-only">Search cards</DialogPrimitive.Title>
           <Input

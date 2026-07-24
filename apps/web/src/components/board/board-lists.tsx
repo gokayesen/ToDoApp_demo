@@ -113,8 +113,11 @@ export function BoardLists({
       const list = orderedLists.find((l) => l.id === id);
       if (!list) return null;
       return (
-        <div className="w-72 rounded-lg bg-muted p-2 shadow-lg ring-1 ring-foreground/10">
-          <div className="truncate px-1 py-1 text-sm font-medium text-foreground">{list.name}</div>
+        <div
+          className="w-72 rounded-md border border-neutral-200/80 bg-neutral-100/90 p-2 backdrop-blur-sm"
+          style={{ boxShadow: 'var(--shadow-drag)', transform: 'rotate(1.5deg)' }}
+        >
+          <div className="truncate px-1 py-1 text-[15px] font-semibold text-foreground">{list.name}</div>
         </div>
       );
     }
@@ -123,7 +126,10 @@ export function BoardLists({
       .find((c) => c.id === id);
     if (!card) return null;
     return (
-      <div className="max-w-64 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-lg ring-1 ring-foreground/10">
+      <div
+        className="max-w-64 rounded-md border border-neutral-200 bg-card px-3 py-2.5 text-sm font-medium text-foreground"
+        style={{ boxShadow: 'var(--shadow-drag)', transform: 'rotate(1.5deg)' }}
+      >
         {card.title}
       </div>
     );
@@ -372,6 +378,8 @@ export function BoardLists({
         boardId={boardId}
         boardName={boardName}
         currentUserId={currentUserId}
+        otherLists={openCardList ? orderedLists.filter((l) => l.id !== openCardList.id) : []}
+        onMoveToList={handleMoveToList}
         open={openCardId !== null}
         onOpenChange={(next) => {
           if (!next) setOpenCardId(null);

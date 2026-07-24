@@ -60,7 +60,7 @@ export function QuickAddCardForm({ listId }: { listId: string }) {
     return (
       <Button
         variant="ghost"
-        className="justify-start text-muted-foreground"
+        className="justify-start text-muted-foreground hover:bg-card/60 hover:text-foreground"
         onClick={() => setEditing(true)}
       >
         + Add card
@@ -80,7 +80,7 @@ export function QuickAddCardForm({ listId }: { listId: string }) {
         onBlur={() => {
           if (!title) cancel();
         }}
-        className="w-full resize-none rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="w-full resize-none rounded-sm border border-input bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-2">

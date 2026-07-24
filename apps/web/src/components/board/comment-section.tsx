@@ -38,7 +38,7 @@ function renderBody(body: string, members: BoardMember[]): ReactNode {
   while ((match = pattern.exec(body))) {
     if (match.index > lastIndex) nodes.push(body.slice(lastIndex, match.index));
     nodes.push(
-      <span key={key++} className="rounded bg-primary/10 px-1 font-medium text-primary">
+      <span key={key++} className="rounded-xs bg-accent-soft px-1 font-medium text-accent-700">
         {match[0]}
       </span>,
     );
@@ -178,7 +178,7 @@ export function CommentSection({ card, boardId, listId }: { card: Card; boardId:
                     {timeFormatter.format(new Date(item.comment.createdAt))}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap break-words text-sm">
+                <p className="mt-1 rounded-sm border border-border bg-card px-3 py-2 whitespace-pre-wrap break-words text-sm text-secondary-foreground">
                   {renderBody(item.comment.body, members ?? [])}
                 </p>
               </div>
@@ -214,10 +214,10 @@ export function CommentSection({ card, boardId, listId }: { card: Card; boardId:
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Write a comment… use @ to mention a board member"
-          className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="w-full resize-none rounded-sm border border-input bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
         {matches.length > 0 && (
-          <div className="absolute bottom-full left-0 z-10 mb-1 w-56 rounded-md border border-border bg-popover p-1 shadow-md">
+          <div className="absolute bottom-full left-0 z-10 mb-1 w-56 rounded-md border border-border bg-popover p-1 shadow-popover">
             {matches.map((member) => (
               <button
                 key={member.userId}

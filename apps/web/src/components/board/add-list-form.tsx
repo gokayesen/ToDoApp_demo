@@ -44,7 +44,7 @@ export function AddListForm({ boardId }: { boardId: string }) {
     return (
       <Button
         variant="ghost"
-        className="w-72 shrink-0 justify-start text-muted-foreground"
+        className="w-72 shrink-0 justify-start text-muted-foreground hover:bg-card/60 hover:text-foreground"
         onClick={() => setEditing(true)}
       >
         <PlusIcon />
@@ -54,7 +54,10 @@ export function AddListForm({ boardId }: { boardId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted p-2">
+    <form
+      onSubmit={handleSubmit}
+      className="flex w-[288px] shrink-0 flex-col gap-2 rounded-md border border-neutral-200/80 bg-neutral-100/70 p-2 backdrop-blur-sm"
+    >
       <Input
         autoFocus
         required

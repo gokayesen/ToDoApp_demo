@@ -66,24 +66,28 @@ export function ListColumn({
       ref={setElement}
       data-flip-id={list.id}
       data-list-id={list.id}
-      className="flex w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted p-2"
+      className="flex w-[288px] shrink-0 flex-col gap-2 rounded-md border border-neutral-200/80 bg-neutral-100/70 p-2 backdrop-blur-sm"
       style={{
         opacity: isDragging ? 0.5 : 1,
-        boxShadow: highlightedIds.has(list.id) ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
+        boxShadow: highlightedIds.has(list.id) ? '0 0 0 2px var(--accent-300)' : undefined,
         transition: 'box-shadow 1.5s ease-out',
       }}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 px-1 py-1">
         <h3
           ref={handleRef}
           tabIndex={0}
-          className="min-w-0 flex-1 cursor-grab truncate px-1 py-1 text-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
+          className="min-w-0 cursor-grab truncate text-[15px] font-semibold text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
         >
           {list.name}
         </h3>
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-200 px-1.5 text-xs font-semibold text-neutral-600">
+          {cards.length}
+        </span>
+        <span className="flex-1" />
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="shrink-0 rounded p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="shrink-0 rounded-sm p-1 text-muted-foreground outline-none hover:bg-neutral-200/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`${list.name} list menu`}
           >
             <MoreHorizontalIcon className="size-4" />

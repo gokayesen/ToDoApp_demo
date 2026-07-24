@@ -3,7 +3,7 @@
 import type { Notification } from '@todoapp/shared';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BellIcon, XIcon } from 'lucide-react';
+import { BellIcon, SettingsIcon, XIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ import {
 } from '@/lib/notification-api';
 import { groupNotificationsByDay } from '@/lib/group-notifications-by-day';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -115,10 +116,14 @@ export function NotificationCenter() {
             <BellIcon />
             <span className="sr-only">Notifications{unreadCount > 0 ? ` (${unreadCount} unread)` : ''}</span>
             {unreadCount > 0 && (
-              <span
+              <Badge
+                variant="count"
+                tone="danger"
                 aria-hidden
-                className="absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive"
-              />
+                className="absolute -top-1 -right-1"
+              >
+                {unreadCount}
+              </Badge>
             )}
           </Button>
         }
@@ -130,10 +135,12 @@ export function NotificationCenter() {
         />
         <DialogPrimitive.Popup
           data-slot="notification-center-content"
-          className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col gap-3 overflow-y-auto border-l bg-popover p-4 text-sm text-popover-foreground outline-none duration-150 data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right"
+          className="fixed inset-y-0 right-0 z-50 flex w-[380px] max-w-full flex-col gap-3 overflow-y-auto border-l border-border bg-popover p-4 text-sm text-popover-foreground outline-none duration-[320ms] data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right"
+          style={{ boxShadow: 'var(--shadow-modal)' }}
         >
           <div className="flex items-center justify-between gap-2">
-            <DialogPrimitive.Title className="font-heading text-base font-medium">
+            <DialogPrimitive.Title className="flex items-center gap-2 font-heading text-base font-semibold">
+              <BellIcon className="size-[18px] text-muted-foreground" />
               Notifications
             </DialogPrimitive.Title>
             <div className="flex items-center gap-1">
@@ -160,30 +167,24 @@ export function NotificationCenter() {
             <div className="flex flex-col gap-4">
               {groups.map(([day, dayNotifications]) => (
                 <div key={day} className="flex flex-col gap-1">
-                  <p className="px-1 text-xs font-medium text-muted-foreground">{day}</p>
+                  <p className="px-1.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{day}</p>
                   <div className="flex flex-col gap-0.5">
                     {dayNotifications.map((notification) => (
                       <button
                         key={notification.id}
                         onClick={() => handleSelect(notification)}
                         className={cn(
-                          'flex items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted',
-                          !notification.isRead && 'bg-primary/5',
+                          'flex items-start gap-2 rounded-md px-2 py-2 text-left hover:bg-muted',
+                          !notification.isRead && 'bg-accent-soft hover:bg-accent-soft',
                         )}
                       >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            'mt-1.5 size-1.5 shrink-0 rounded-full',
-                            notification.isRead ? 'bg-transparent' : 'bg-primary',
-                          )}
-                        />
                         <span className="flex-1">
                           <span className="block text-foreground">{describeNotification(notification)}</span>
                           <span className="text-xs text-muted-foreground">
                             {timeFormatter.format(new Date(notification.createdAt))}
                           </span>
                         </span>
+                        {!notification.isRead && <Badge variant="dot" tone="accent" aria-hidden className="mt-1.5" />}
                       </button>
                     ))}
                   </div>
@@ -195,12 +196,13 @@ export function NotificationCenter() {
           <Button
             variant="ghost"
             size="sm"
-            className="mt-auto self-start"
+            className="mt-auto flex items-center gap-1.5 self-start text-muted-foreground"
             onClick={() => {
               setOpen(false);
               router.push('/settings/notifications');
             }}
           >
+            <SettingsIcon className="size-3.5" />
             Notification settings
           </Button>
         </DialogPrimitive.Popup>

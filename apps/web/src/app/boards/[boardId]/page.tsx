@@ -77,13 +77,23 @@ export default function BoardViewPage() {
   return (
     <AppShell user={user}>
       <div className="flex h-full flex-col" style={backgroundStyle}>
-        <header className="flex items-center justify-between gap-4 px-6 py-4">
-          <h1 className="truncate text-lg font-semibold text-foreground drop-shadow-sm">
+        <header
+          className="flex h-14 shrink-0 items-center justify-between gap-4 px-6 backdrop-blur-md"
+          style={{ background: 'var(--scrim-surface)' }}
+        >
+          <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
             {boardLoading ? 'Loading…' : board?.name}
           </h1>
-          <div className="flex items-center gap-2">
-            <FilterPopover boardId={boardId} filters={filters} onChange={setFilters} />
+          <div className="flex items-center gap-3">
+            {presence.length > 0 && (
+              <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+                <span className="size-2 rounded-full bg-success-fg" />
+                {presence.length} viewing
+              </span>
+            )}
             <PresenceAvatars members={presence} />
+            <div className="h-5 w-px bg-border" />
+            <FilterPopover boardId={boardId} filters={filters} onChange={setFilters} />
           </div>
         </header>
         <div className="flex flex-1 items-start gap-3 overflow-x-auto px-6 pb-6">

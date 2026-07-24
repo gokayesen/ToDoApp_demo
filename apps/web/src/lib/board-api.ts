@@ -76,6 +76,13 @@ export function updateCard(cardId: string, input: UpdateCardRequest) {
   });
 }
 
+// Story 3.8 built this endpoint but deliberately shipped no frontend trigger
+// for it, noting Card Detail (Story 4.1, not built yet at the time) as its
+// "real home" — wired here from CardDetail's right-rail Archive action.
+export function archiveCard(cardId: string) {
+  return apiFetch<Card>(`/cards/${cardId}/archive`, { method: 'POST' });
+}
+
 export function listLabels(boardId: string) {
   return apiFetch<Label[]>(`/boards/${boardId}/labels`);
 }

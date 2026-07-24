@@ -4,15 +4,7 @@ import type { Card, List } from '@todoapp/shared';
 import { KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
 import { SortableKeyboardPlugin } from '@dnd-kit/dom/sortable';
 import { useSortable } from '@dnd-kit/react/sortable';
-import {
-  AlertTriangleIcon,
-  CalendarIcon,
-  ClockIcon,
-  ListChecksIcon,
-  MessageSquareIcon,
-  MoveIcon,
-  PaperclipIcon,
-} from 'lucide-react';
+import { ListChecksIcon, MessageSquareIcon, MoveIcon, PaperclipIcon } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -21,22 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AvatarStack } from '@/components/ui/person-avatar';
-import { getDueStatus } from '@/lib/due-date-status';
+import { DUE_STATUS_PRESENTATION, getDueStatus } from '@/lib/due-date-status';
 import { cn } from '@/lib/utils';
 import { LabelDot } from './label-badge';
 
 const dueDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
-
-// FR25 / UX §8 "color is never the only signal": each due-date status pairs
-// its own color with its own icon shape and an sr-only text label, not just a
-// color swap on a shared icon.
-const DUE_STATUS_PRESENTATION = {
-  overdue: { icon: AlertTriangleIcon, className: 'text-red-600 dark:text-red-400', label: 'Overdue' },
-  // amber-600 on this card face's white background is only ~3.2:1 (fails
-  // WCAG AA's 4.5:1 for this text-xs size) — amber-700 clears ~5:1.
-  'due-soon': { icon: ClockIcon, className: 'text-amber-700 dark:text-amber-400', label: 'Due soon' },
-  'on-track': { icon: CalendarIcon, className: 'text-muted-foreground', label: 'Due' },
-} as const;
 
 // FR19: cards reorder within/across Lists via drag (pointer + keyboard, via
 // dnd-kit's KeyboardSensor on the whole card — Space to pick up, arrow keys
@@ -143,7 +124,7 @@ export function CardItem({
         // click-to-open mouse behavior.
         if (event.key === 'Enter') onOpen(card.id);
       }}
-      className="group flex cursor-grab flex-col gap-1 rounded-md bg-background px-2.5 py-2 text-sm text-foreground shadow-sm outline-none ring-1 ring-foreground/10 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex cursor-grab flex-col gap-1.5 rounded-md border border-neutral-200 bg-card px-3 py-2.5 text-sm text-foreground shadow-card outline-none transition-[box-shadow,border-color] duration-150 hover:border-neutral-300 hover:shadow-hover active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
       style={{
         // FR38/UX §4.2 "dims ... non-matching cards in place (no layout
         // jump/reload)": opacity-only, never removed from the DOM/flow, so
@@ -153,19 +134,24 @@ export function CardItem({
         // UX §6 "soft colored outline, ~1.5s fade": appears instantly when a
         // live update lands (useBoardLiveUpdates), then this transition
         // fades it back out once that hook drops the id from its set.
-        boxShadow: isHighlighted ? '0 0 0 2px var(--color-primary)' : '0 0 0 2px transparent',
-        transition: 'box-shadow 1.5s ease-out, opacity 150ms ease-out',
+        boxShadow: isDragging
+          ? 'var(--shadow-drag)'
+          : isHighlighted
+            ? '0 0 0 2px var(--accent-300), var(--shadow-card)'
+            : undefined,
+        transform: isDragging ? 'rotate(1.5deg)' : undefined,
+        transition: 'box-shadow 1.5s ease-out, opacity 150ms ease-out, border-color 150ms ease-out',
       }}
     >
       <div className="flex items-start justify-between gap-1">
-        <span className="min-w-0 flex-1 break-words">{card.title}</span>
+        <span className="min-w-0 flex-1 break-words font-medium text-foreground">{card.title}</span>
         {otherLists.length > 0 && (
           // Stops the click from bubbling to the outer div's onOpen — the
           // menu is its own affordance, not an entry point into Card Detail.
           <div onClick={(event) => event.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+                className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 outline-none hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
                 aria-label="Move to list"
               >
                 <MoveIcon className="size-4" />
@@ -191,54 +177,64 @@ export function CardItem({
           ))}
         </div>
       )}
-      {card.dueDate &&
-        (() => {
-          const status = getDueStatus(card.dueDate)!;
-          const { icon: StatusIcon, className, label } = DUE_STATUS_PRESENTATION[status];
-          return (
-            <div className={`flex items-center gap-1 text-xs ${className}`}>
-              <StatusIcon className="size-3" />
-              <span className="sr-only">{label}: </span>
-              {dueDateFormatter.format(new Date(card.dueDate))}
-            </div>
-          );
-        })()}
-      {card.assignees.length > 0 && (
-        <AvatarStack people={card.assignees} keyOf={(assignee) => assignee.id} max={3} size="sm" />
-      )}
       {(() => {
         const totalItems = card.checklists.reduce((sum, checklist) => sum + checklist.items.length, 0);
         const commentCount = card.comments.length;
         const attachmentCount = card.attachments.length;
-        if (totalItems === 0 && commentCount === 0 && attachmentCount === 0) return null;
         const checkedItems = card.checklists.reduce(
           (sum, checklist) => sum + checklist.items.filter((item) => item.isChecked).length,
           0,
         );
+        const hasMeta =
+          card.dueDate || totalItems > 0 || commentCount > 0 || attachmentCount > 0 || card.assignees.length > 0;
+        if (!hasMeta) return null;
+        const status = card.dueDate ? getDueStatus(card.dueDate)! : null;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-0.5">
+            {status &&
+              (() => {
+                const { icon: StatusIcon, fg, bg, border, label } = DUE_STATUS_PRESENTATION[status];
+                return (
+                  <div
+                    className={cn(
+                      'inline-flex w-fit items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-semibold',
+                      fg,
+                      bg,
+                      border,
+                    )}
+                  >
+                    <StatusIcon className="size-3" />
+                    <span className="sr-only">{label}: </span>
+                    {dueDateFormatter.format(new Date(card.dueDate!))}
+                  </div>
+                );
+              })()}
             {totalItems > 0 && (
               <div
                 className={cn(
-                  'flex items-center gap-1 rounded px-1 text-xs text-muted-foreground',
-                  checkedItems === totalItems && 'bg-primary/10 text-primary',
+                  'flex items-center gap-1 text-[12px] font-medium text-muted-foreground',
+                  checkedItems === totalItems && 'text-success-fg',
                 )}
               >
-                <ListChecksIcon className="size-3" />
+                <ListChecksIcon className="size-3.5" />
                 {checkedItems}/{totalItems}
               </div>
             )}
             {commentCount > 0 && (
-              <div className="flex items-center gap-1 rounded px-1 text-xs text-muted-foreground">
-                <MessageSquareIcon className="size-3" />
+              <div className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
+                <MessageSquareIcon className="size-3.5" />
                 {commentCount}
               </div>
             )}
             {attachmentCount > 0 && (
-              <div className="flex items-center gap-1 rounded px-1 text-xs text-muted-foreground">
-                <PaperclipIcon className="size-3" />
+              <div className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
+                <PaperclipIcon className="size-3.5" />
                 {attachmentCount}
               </div>
+            )}
+            <span className="flex-1" />
+            {card.assignees.length > 0 && (
+              <AvatarStack people={card.assignees} keyOf={(assignee) => assignee.id} max={3} size="sm" />
             )}
           </div>
         );
