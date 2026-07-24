@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { ApiError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { getBoard, listLists } from '@/lib/board-api';
 import { EMPTY_CARD_FILTERS } from '@/lib/card-filters';
@@ -31,16 +32,22 @@ export default function BoardViewPage() {
   const { user, loading } = useAuth();
   const [filters, setFilters] = useState(EMPTY_CARD_FILTERS);
 
-  const { data: board, isLoading: boardLoading } = useQuery({
+  const {
+    data: board,
+    isLoading: boardLoading,
+    error: boardError,
+  } = useQuery({
     queryKey: ['board', boardId],
     queryFn: () => getBoard(boardId),
     enabled: !!user,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && (error.status === 403 || error.status === 404)) && failureCount < 3,
   });
 
   const { data: lists, isLoading: listsLoading } = useQuery({
     queryKey: ['lists', boardId],
     queryFn: () => listLists(boardId),
-    enabled: !!user,
+    enabled: !!user && !boardError,
   });
 
   useEffect(() => {
@@ -56,8 +63,10 @@ export default function BoardViewPage() {
   }, [boardId]);
 
   useEffect(() => {
-    if (board) recordBoardVisit({ id: board.id, name: board.name, workspaceId: board.workspaceId });
-  }, [board]);
+    if (board && user) {
+      recordBoardVisit(user.id, { id: board.id, name: board.name, workspaceId: board.workspaceId });
+    }
+  }, [board, user]);
 
   // Story 5.1: join the board's realtime room while this page is open.
   // Story 5.2 adds the live presence avatar stack below; BoardLists (Story
@@ -66,6 +75,20 @@ export default function BoardViewPage() {
   const presence = usePresence(boardId);
 
   if (loading || !user) return null;
+
+  if (boardError instanceof ApiError && (boardError.status === 403 || boardError.status === 404)) {
+    return (
+      <AppShell user={user}>
+        <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+          <h1 className="text-lg font-semibold text-foreground">Board not found</h1>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            This board doesn&apos;t exist, or you don&apos;t have access to it. If you think this is a
+            mistake, ask a board Admin to invite you.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   const background = board?.background;
   const backgroundStyle = background

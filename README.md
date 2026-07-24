@@ -9,6 +9,10 @@ typed-end-to-end codebase.
 > This project is built and packaged to run locally — see [Getting started](#getting-started); it is
 > not deployed to a public URL.
 
+| Dashboard | Board view | Card detail |
+|---|---|---|
+| ![Dashboard](./docs/screenshots/dashboard.jpg) | ![Board view](./docs/screenshots/board-view.jpg) | ![Card detail](./docs/screenshots/card-detail.jpg) |
+
 ## Table of contents
 
 - [Features](#features)

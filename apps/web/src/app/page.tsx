@@ -40,7 +40,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : workspaces && workspaces.length > 0 ? (
           <>
-            <RecentBoardsRow />
+            <RecentBoardsRow userId={user.id} />
             {workspaces.map((workspace) => (
               <WorkspaceSection key={workspace.id} workspace={workspace} />
             ))}

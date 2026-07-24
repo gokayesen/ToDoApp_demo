@@ -7,12 +7,12 @@ import { getRecentBoards, type RecentBoard } from '@/lib/recent-boards';
 
 // Hidden entirely until Board View (Epic 3) starts calling recordBoardVisit —
 // there's nothing to show before that exists.
-export function RecentBoardsRow() {
+export function RecentBoardsRow({ userId }: { userId: string }) {
   const [recent, setRecent] = useState<RecentBoard[]>([]);
 
   useEffect(() => {
-    setRecent(getRecentBoards());
-  }, []);
+    setRecent(getRecentBoards(userId));
+  }, [userId]);
 
   if (recent.length === 0) return null;
 
