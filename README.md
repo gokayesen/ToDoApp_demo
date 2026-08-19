@@ -16,6 +16,7 @@ typed-end-to-end codebase.
 ## Table of contents
 
 - [Features](#features)
+- [Feature gallery](#feature-gallery)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
 - [Repository layout](#repository-layout)
@@ -45,6 +46,20 @@ typed-end-to-end codebase.
   due-date range).
 - **Account deletion**: full cascade per the data model's referential-integrity rules, including a
   forced ownership-transfer step for a workspace's last owner.
+
+## Feature gallery
+
+| Auth | Board filters |
+|---|---|
+| ![Sign up](./docs/screenshots/auth.jpg) | ![Board-level filters](./docs/screenshots/filters.jpg) |
+
+| Cross-board search | Real-time collaboration |
+|---|---|
+| ![Global search](./docs/screenshots/search.jpg) | ![Two users viewing the same board live](./docs/screenshots/realtime-collaboration.jpg) |
+
+| Notification center | Notification preferences |
+|---|---|
+| ![In-app notifications](./docs/screenshots/notifications.jpg) | ![Per-event email preferences](./docs/screenshots/notification-settings.jpg) |
 
 ## Architecture
 
