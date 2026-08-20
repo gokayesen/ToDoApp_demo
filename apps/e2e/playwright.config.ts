@@ -40,6 +40,10 @@ export default defineConfig({
         REDIS_URL: process.env.E2E_REDIS_URL ?? 'redis://localhost:6379/1',
         JWT_ACCESS_SECRET: 'e2e-test-secret',
         CORS_ORIGIN: WEB_URL,
+        // The whole suite shares one IP against Story 1.4's 20-req/15min
+        // auth rate limiter — well below what register+login+refresh calls
+        // across all spec files add up to in a single run.
+        AUTH_RATE_LIMIT: '1000',
       },
     },
     {
