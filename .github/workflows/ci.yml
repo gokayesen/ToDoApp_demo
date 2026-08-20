@@ -127,5 +127,8 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: apps/e2e
 
+      - name: Build shared package
+        run: pnpm --filter @todoapp/shared build
+
       - name: E2E
         run: pnpm test:e2e
