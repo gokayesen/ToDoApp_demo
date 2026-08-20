@@ -34,6 +34,3 @@ test-results/
 
 # Misc
 .vercel/
-
-# Local session-bootstrap doc for AI-assisted dev sessions, not part of the app
-CLAUDE_SESSION_START.md
